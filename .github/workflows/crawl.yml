@@ -1,0 +1,42 @@
+name: 每周爬取 SEC 披露数据
+
+on:
+  # 每周一 UTC 06:00（北京时间周一 14:00）自动运行
+  schedule:
+    - cron: '0 6 * * 1'
+  # 允许手动触发（在 GitHub Actions 页面点击 Run workflow）
+  workflow_dispatch:
+
+permissions:
+  contents: write   # 允许写入仓库（提交更新的 data/filings.json）
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: 检出仓库
+        uses: actions/checkout@v4
+        with:
+          # 拉取完整历史，确保 git 提交时有正确的用户信息
+          fetch-depth: 1
+
+      - name: 安装 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 运行爬虫
+        run: node crawler.js
+
+      - name: 提交并推送更新数据
+        run: |
+          git config user.name  "SEC Crawler Bot"
+          git config user.email "bot@github-actions.com"
+          git add data/filings.json
+          # 如果 filings.json 没有变化，git diff 为空，跳过提交
+          git diff --staged --quiet && echo "数据无更新，跳过提交" || (
+            git commit -m "数据更新: $(date +%Y-%m-%d)"
+            git push
+          )
