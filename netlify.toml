@@ -1,0 +1,15 @@
+# Netlify 部署配置
+[build]
+  publish = "."        # 发布根目录（index.html 在根目录）
+  command = ""         # 无需构建命令（纯静态）
+
+[[headers]]
+  for = "/data/*"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"   # 数据文件每次更新后强制重新加载
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"

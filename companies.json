@@ -1,0 +1,19 @@
+[
+  { "ticker": "NTES", "cik": "0001110646", "name": "NetEase, Inc.",                      "searchName": "NetEase" },
+  { "ticker": "BABA", "cik": "0001577552", "name": "Alibaba Group Holding Ltd",           "searchName": "Alibaba Group" },
+  { "ticker": "JD",   "cik": "0001549802", "name": "JD.com, Inc.",                        "searchName": "JD.com" },
+  { "ticker": "PDD",  "cik": "0001737806", "name": "PDD Holdings Inc.",                   "searchName": "PDD Holdings" },
+  { "ticker": "VIPS", "cik": "0001529192", "name": "Vipshop Holdings Ltd",                "searchName": "Vipshop" },
+  { "ticker": "BEKE", "cik": "0001809587", "name": "KE Holdings Inc.",                    "searchName": "KE Holdings" },
+  { "ticker": "TCOM", "cik": "0001269238", "name": "Trip.com Group Ltd",                  "searchName": "Ctrip" },
+  { "ticker": "BZ",   "cik": "0001842827", "name": "Kanzhun Ltd",                         "searchName": "Kanzhun" },
+  { "ticker": "YMM",  "cik": "0001838413", "name": "Full Truck Alliance Co. Ltd.",        "searchName": "Full Truck Alliance" },
+  { "ticker": "BIDU", "cik": "0001329099", "name": "Baidu, Inc.",                         "searchName": "Baidu" },
+  { "ticker": "BILI", "cik": "0001723690", "name": "Bilibili Inc.",                       "searchName": "Bilibili" },
+  { "ticker": "WB",   "cik": "0001595761", "name": "WEIBO Corp",                          "searchName": "WEIBO" },
+  { "ticker": "TME",  "cik": "0001744676", "name": "Tencent Music Entertainment Group",  "searchName": "Tencent Music" },
+  { "ticker": "IQ",   "cik": "0001722608", "name": "iQIYI, Inc.",                         "searchName": "iQIYI" },
+  { "ticker": "JOYY", "cik": "0001530238", "name": "JOYY Inc.",                           "searchName": "JOYY" },
+  { "ticker": "EDU",  "cik": "0001372920", "name": "New Oriental Education & Technology Group Inc.", "searchName": "New Oriental" },
+  { "ticker": "TAL",  "cik": "0001499620", "name": "TAL Education Group",                 "searchName": "TAL Education" }
+]
