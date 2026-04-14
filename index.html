@@ -97,16 +97,16 @@
     .stats-bar strong { color: #1a1a2e; }
 
     /* ── Table Container ───────────────────────────────── */
-    .table-wrap { padding: 0 24px 32px; }
+    .table-wrap { padding: 0 24px 32px; overflow-x: auto; }
 
     /* ── Tabulator Overrides ───────────────────────────── */
     #filings-table .tabulator-header { background: #f8fafc; border-bottom: 2px solid #e2e8f0; }
     #filings-table .tabulator-header .tabulator-col { border-right: 1px solid #e9ecef; }
-    #filings-table .tabulator-header .tabulator-col-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: #475569; }
+    #filings-table .tabulator-header .tabulator-col-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: #475569; }
     #filings-table .tabulator-row { border-bottom: 1px solid #f1f5f9; }
     #filings-table .tabulator-row:hover { background: #f8faff !important; }
     #filings-table .tabulator-row.tabulator-row-even { background: #fafbfd; }
-    #filings-table .tabulator-cell { font-size: 13px; padding: 10px 12px; color: #334155; vertical-align: middle; }
+    #filings-table .tabulator-cell { font-size: 13px; padding: 9px 12px; color: #334155; vertical-align: middle; }
 
     /* ── Form Type Badge ───────────────────────────────── */
     .badge {
@@ -121,8 +121,6 @@
     .badge-13g-a  { background: #eff6ff; color: #2563eb; }
     .badge-13d    { background: #fce7f3; color: #9d174d; }
     .badge-13d-a  { background: #fdf2f8; color: #be185d; }
-    .badge-4      { background: #d1fae5; color: #065f46; }
-    .badge-4a     { background: #ecfdf5; color: #047857; }
     .badge-other  { background: #f1f5f9; color: #64748b; }
 
     /* ── Ticker Pill ───────────────────────────────────── */
@@ -137,6 +135,15 @@
       margin-right: 6px;
       letter-spacing: 0.3px;
     }
+
+    /* ── Delta Colors ──────────────────────────────────── */
+    .delta-up   { color: #16a34a; font-weight: 500; }
+    .delta-down { color: #dc2626; font-weight: 500; }
+    .delta-flat { color: #94a3b8; }
+
+    /* ── Number Cells ──────────────────────────────────── */
+    .num { font-variant-numeric: tabular-nums; }
+    .muted { color: #94a3b8; }
 
     /* ── EDGAR Link ────────────────────────────────────── */
     .edgar-link {
@@ -176,7 +183,7 @@
 <div class="header">
   <div>
     <div class="header-title">中概股持仓披露追踪</div>
-    <div class="header-sub">Schedule 13D/G &amp; Form 4 · 17 家中概股 · 数据来源：SEC EDGAR</div>
+    <div class="header-sub">Schedule 13D/G · 17 家中概股 · 数据来源：SEC EDGAR</div>
   </div>
   <div class="header-meta" id="meta">加载中…</div>
 </div>
@@ -193,12 +200,10 @@
     <label>表格类型</label>
     <select id="f-form">
       <option value="">全部类型</option>
-      <option value="SC 13D">SC 13D（新增）</option>
+      <option value="SC 13D">SC 13D（新增举牌）</option>
       <option value="SC 13D/A">SC 13D/A（修正）</option>
-      <option value="SC 13G">SC 13G（新增）</option>
+      <option value="SC 13G">SC 13G（新增被动）</option>
       <option value="SC 13G/A">SC 13G/A（修正）</option>
-      <option value="4">Form 4</option>
-      <option value="4/A">Form 4/A</option>
     </select>
   </div>
   <div class="filter-group">
@@ -211,7 +216,7 @@
   </div>
   <div class="filter-group">
     <label>申报人搜索</label>
-    <input type="text" id="f-filer" placeholder="股东/机构名称…" />
+    <input type="text" id="f-filer" placeholder="股东 / 机构名称…" />
   </div>
   <button class="btn-reset" onclick="resetFilters()">清除筛选</button>
 </div>
@@ -237,16 +242,40 @@ function badgeClass(form) {
     case 'SC 13G/A': return 'badge-13g-a';
     case 'SC 13D':   return 'badge-13d';
     case 'SC 13D/A': return 'badge-13d-a';
-    case '4':        return 'badge-4';
-    case '4/A':      return 'badge-4a';
     default:         return 'badge-other';
   }
 }
 
 function fmtDate(d) {
-  if (!d) return '—';
-  // YYYY-MM-DD → YYYY/MM/DD
-  return d.replace(/-/g, '/');
+  return d ? d.replace(/-/g, '/') : '—';
+}
+
+function fmtShares(n) {
+  if (n == null) return '<span class="muted">—</span>';
+  return `<span class="num">${n.toLocaleString('en-US')}</span>`;
+}
+
+function fmtPct(n) {
+  if (n == null) return '<span class="muted">—</span>';
+  return `<span class="num">${n.toFixed(1)}%</span>`;
+}
+
+function fmtDeltaShares(n) {
+  if (n == null) return '<span class="muted">—</span>';
+  if (n === 0)   return '<span class="delta-flat">—</span>';
+  const cls  = n > 0 ? 'delta-up' : 'delta-down';
+  const arrow = n > 0 ? '▲' : '▼';
+  const sign  = n > 0 ? '+' : '';
+  return `<span class="${cls} num">${arrow} ${sign}${n.toLocaleString('en-US')}</span>`;
+}
+
+function fmtDeltaPct(n) {
+  if (n == null) return '<span class="muted">—</span>';
+  if (n === 0)   return '<span class="delta-flat">—</span>';
+  const cls  = n > 0 ? 'delta-up' : 'delta-down';
+  const arrow = n > 0 ? '▲' : '▼';
+  const sign  = n > 0 ? '+' : '';
+  return `<span class="${cls} num">${arrow} ${sign}${n.toFixed(1)}%</span>`;
 }
 
 // ── 筛选状态 ──────────────────────────────────────────────────────────────────
@@ -262,12 +291,11 @@ function applyFilters() {
   const filerQ   = document.getElementById('f-filer').value.trim().toLowerCase();
 
   table.setFilter(row => {
-    const d = row;
-    if (ticker   && d.ticker   !== ticker)   return false;
-    if (form     && d.formType !== form)     return false;
-    if (dateFrom && d.filedDate < dateFrom)  return false;
-    if (dateTo   && d.filedDate > dateTo)    return false;
-    if (filerQ   && !(d.filerName || '').toLowerCase().includes(filerQ)) return false;
+    if (ticker   && row.ticker   !== ticker)   return false;
+    if (form     && row.formType !== form)     return false;
+    if (dateFrom && row.filedDate < dateFrom)  return false;
+    if (dateTo   && row.filedDate > dateTo)    return false;
+    if (filerQ   && !(row.filerName || '').toLowerCase().includes(filerQ)) return false;
     return true;
   });
 
@@ -297,7 +325,7 @@ async function init() {
     const json = await res.json();
     allData = json.filings || [];
 
-    // 更新元数据
+    // 元数据
     const lastUpdated = json.lastUpdated
       ? new Date(json.lastUpdated).toLocaleDateString('zh-CN', {year:'numeric',month:'2-digit',day:'2-digit'})
       : '—';
@@ -305,7 +333,7 @@ async function init() {
       `数据更新：<span>${lastUpdated}</span>&nbsp;&nbsp;共 <span>${json.totalCount || allData.length}</span> 条记录`;
     document.getElementById('count-total').textContent = (json.totalCount || allData.length).toLocaleString();
 
-    // 填充公司下拉列表（按 ticker 排序）
+    // 公司下拉
     const tickers = [...new Set(allData.map(f => f.ticker))].sort();
     const sel = document.getElementById('f-ticker');
     const companies = {};
@@ -317,30 +345,39 @@ async function init() {
       sel.appendChild(opt);
     });
 
-    // 隐藏 loading，显示表格
     document.getElementById('loading').style.display = 'none';
     document.getElementById('filings-table').style.display = 'block';
 
-    // 初始化 Tabulator
+    // Tabulator
     table = new Tabulator('#filings-table', {
       data: allData,
-      layout: 'fitColumns',
-      height: 'calc(100vh - 230px)',
+      layout: 'fitDataFill',
+      height: 'calc(100vh - 240px)',
       placeholder: '没有符合筛选条件的记录',
       initialSort: [{ column: 'filedDate', dir: 'desc' }],
       columns: [
         {
           title: '申报日期',
           field: 'filedDate',
-          width: 110,
+          width: 100,
           sorter: 'string',
-          formatter: (cell) => `<span style="font-variant-numeric:tabular-nums">${fmtDate(cell.getValue())}</span>`
+          formatter: cell => `<span class="num">${fmtDate(cell.getValue())}</span>`
+        },
+        {
+          title: '持仓截止',
+          field: 'eventDate',
+          width: 100,
+          sorter: 'string',
+          formatter: cell => {
+            const v = cell.getValue();
+            return v ? `<span class="num muted">${fmtDate(v)}</span>` : '<span class="muted">—</span>';
+          }
         },
         {
           title: '公司',
           field: 'company',
-          minWidth: 160,
-          formatter: (cell, params, onRendered) => {
+          width: 155,
+          formatter: (cell) => {
             const row  = cell.getRow().getData();
             const tick = `<span class="ticker-pill">${row.ticker}</span>`;
             const name = (row.company || '').replace(/,?\s*(Inc\.|Ltd|Group|Holdings?|Corp)\.?$/i, '');
@@ -350,8 +387,8 @@ async function init() {
         {
           title: '表格类型',
           field: 'formType',
-          width: 120,
-          formatter: (cell) => {
+          width: 115,
+          formatter: cell => {
             const v = cell.getValue() || '';
             return `<span class="badge ${badgeClass(v)}">${v}</span>`;
           }
@@ -359,28 +396,55 @@ async function init() {
         {
           title: '申报人 / 股东',
           field: 'filerName',
-          minWidth: 200,
-          formatter: (cell) => {
+          minWidth: 170,
+          formatter: cell => {
             const v = cell.getValue() || '—';
             return `<span title="${v}">${v}</span>`;
           }
         },
         {
-          title: '期末日期',
-          field: 'periodDate',
-          width: 110,
-          formatter: (cell) => {
-            const v = cell.getValue();
-            return v ? `<span style="color:#94a3b8;font-variant-numeric:tabular-nums">${fmtDate(v)}</span>` : '—';
-          }
+          title: '当前持股数',
+          field: 'sharesOwned',
+          width: 130,
+          hozAlign: 'right',
+          headerHozAlign: 'right',
+          sorter: 'number',
+          formatter: cell => fmtShares(cell.getValue())
+        },
+        {
+          title: '占总股本',
+          field: 'pctOwned',
+          width: 85,
+          hozAlign: 'right',
+          headerHozAlign: 'right',
+          sorter: 'number',
+          formatter: cell => fmtPct(cell.getValue())
+        },
+        {
+          title: '股数变动',
+          field: 'sharesDelta',
+          width: 140,
+          hozAlign: 'right',
+          headerHozAlign: 'right',
+          sorter: 'number',
+          formatter: cell => fmtDeltaShares(cell.getValue())
+        },
+        {
+          title: '% 变动',
+          field: 'pctDelta',
+          width: 85,
+          hozAlign: 'right',
+          headerHozAlign: 'right',
+          sorter: 'number',
+          formatter: cell => fmtDeltaPct(cell.getValue())
         },
         {
           title: '原文',
           field: 'edgarUrl',
-          width: 80,
+          width: 72,
           hozAlign: 'center',
           headerSort: false,
-          formatter: (cell) => {
+          formatter: cell => {
             const url = cell.getValue();
             if (!url) return '—';
             return `<a class="edgar-link" href="${url}" target="_blank" rel="noopener">
@@ -396,13 +460,12 @@ async function init() {
       ]
     });
 
-    // 绑定筛选事件
+    // 筛选事件
     ['f-ticker','f-form','f-date-from','f-date-to'].forEach(id => {
       document.getElementById(id).addEventListener('change', applyFilters);
     });
     document.getElementById('f-filer').addEventListener('input', applyFilters);
 
-    // 行数更新
     table.on('dataFiltered', updateCount);
     updateCount();
 
