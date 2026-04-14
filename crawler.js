@@ -15,7 +15,18 @@ const COMPANIES_FILE = path.join(__dirname, 'companies.json');
 const DATA_FILE      = path.join(__dirname, 'data', 'filings.json');
 const UA             = 'SEC-Filing-Tracker/2.0 research-contact@researchuse.com';
 const DELAY_MS       = 150;   // ~6 req/s，远低于 EDGAR 限速 10 req/s
-const VALID_FORMS    = new Set(['SC 13D', 'SC 13D/A', 'SC 13G', 'SC 13G/A']);
+
+// 旧格式（2024 及之前）：SC 13D / SC 13G
+// 新格式（2025 起 SEC 强制结构化提交）：SCHEDULE 13D / SCHEDULE 13G
+const VALID_FORMS = new Set([
+  'SC 13D', 'SC 13D/A', 'SC 13G', 'SC 13G/A',
+  'SCHEDULE 13D', 'SCHEDULE 13D/A', 'SCHEDULE 13G', 'SCHEDULE 13G/A',
+]);
+
+// 前端展示统一用短格式（去掉 SCHEDULE 前缀）
+function normalizeFormType(raw) {
+  return raw.replace(/^SCHEDULE /, 'SC ');
+}
 
 // ── 工具 ───────────────────────────────────────────────────────────────────────
 
@@ -77,15 +88,53 @@ function parseAtom(xml) {
 // ── Index 页 → 主文档 URL ────────────────────────────────────────────────────
 
 function findPrimaryDoc(html) {
-  // 取"Document Format Files"表格中第一个 .htm/.txt 链接（即 Seq=1 主文档）
-  const re = /href="(\/Archives\/edgar\/data\/[^"]+\.(htm|txt))"/gi;
-  let m;
-  while ((m = re.exec(html)) !== null) {
-    if (!m[1].toLowerCase().includes('-index')) {
-      return 'https://www.sec.gov' + m[1];
+  // 按优先级查找主文档：.xml（新格式）> .htm > .txt
+  // 均取第一个非 -index 的 /Archives/ 链接
+  const base = 'https://www.sec.gov';
+  for (const ext of ['xml', 'htm', 'txt']) {
+    const re = new RegExp(`href="(\\/Archives\\/edgar\\/data\\/[^"]+\\.${ext})"`, 'gi');
+    let m;
+    while ((m = re.exec(html)) !== null) {
+      if (!m[1].toLowerCase().includes('-index')) {
+        return base + m[1];
+      }
     }
   }
   return null;
+}
+
+// ── 新格式 XML 解析（SCHEDULE 13G/D，2025 年起）────────────────────────────
+
+function parseXmlDoc(xml) {
+  function tag(t)  { const m = xml.match(new RegExp(`<${t}[^>]*>([^<]+)</${t}>`,'i')); return m ? m[1].trim() : null; }
+  function tags(t) { return [...xml.matchAll(new RegExp(`<${t}[^>]*>([^<]+)</${t}>`,'gi'))].map(m=>m[1].trim()); }
+
+  // 申报人：取所有 reportingPersonName，第一个即主申报人
+  const filerName = tag('reportingPersonName');
+
+  // 持仓截止日：MM/DD/YYYY 转 YYYY-MM-DD
+  let eventDate = null;
+  const rawDate = tag('eventDateRequiresFilingThisStatement');
+  if (rawDate) {
+    const p = rawDate.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (p) eventDate = `${p[3]}-${p[1].padStart(2,'0')}-${p[2].padStart(2,'0')}`;
+  }
+
+  // 持股数：取所有 reportingPersonBeneficiallyOwnedAggregateNumberOfShares，取最大值
+  let sharesOwned = null;
+  for (const v of tags('reportingPersonBeneficiallyOwnedAggregateNumberOfShares')) {
+    const n = parseNum(v);
+    if (n !== null && (sharesOwned === null || n > sharesOwned)) sharesOwned = n;
+  }
+
+  // 占总股本：取所有 classPercent，取最大值
+  let pctOwned = null;
+  for (const v of tags('classPercent')) {
+    const n = parsePct(v);
+    if (n !== null && (pctOwned === null || n > pctOwned)) pctOwned = n;
+  }
+
+  return { filerName, eventDate, sharesOwned, pctOwned };
 }
 
 // ── 文档解析 ──────────────────────────────────────────────────────────────────
@@ -193,7 +242,10 @@ async function enrichFiling(f) {
   await sleep(DELAY_MS);
   if (ds !== 200) return;
 
-  const p = parseDoc(toText(dBody));
+  // 新格式（2025 起）为 XML，旧格式为 HTML/TXT
+  const isXml = docUrl.toLowerCase().endsWith('.xml');
+  const p = isXml ? parseXmlDoc(dBody) : parseDoc(toText(dBody));
+
   // 若已有申报人名称（旧数据库），保留；否则用解析结果填充
   if (p.filerName && !f.filerName)  f.filerName  = p.filerName;
   if (p.eventDate  != null)          f.eventDate  = p.eventDate;
@@ -232,18 +284,25 @@ function calculateDeltas(filings) {
 // ── 拉取某公司的新 filing ─────────────────────────────────────────────────────
 
 async function fetchCompany(company, existingIds) {
-  const url = `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${company.cik}` +
-              `&type=SC+13&dateb=&owner=include&count=100&output=atom`;
+  // 查两次：旧格式 SC 13（2024 及之前）+ 新格式 SCHEDULE 13（2025 起）
+  const base = `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${company.cik}` +
+               `&dateb=&owner=include&count=100&output=atom`;
 
-  const { status, body } = await get(url);
-  await sleep(DELAY_MS);
-  if (status !== 200) { console.log(`  Atom feed 错误: HTTP ${status}`); return []; }
+  const entries = [];
+  for (const type of ['SC+13', 'SCHEDULE+13']) {
+    const { status, body } = await get(`${base}&type=${type}`);
+    await sleep(DELAY_MS);
+    if (status !== 200) { console.log(`  Atom feed [${type}] 错误: HTTP ${status}`); continue; }
+    entries.push(...parseAtom(body));
+  }
 
-  const entries = parseAtom(body);
-  console.log(`  Atom feed: ${entries.length} 条 SC 13D/G`);
+  // 去重（两次查询可能有重叠）
+  const seen = new Set();
+  const uniq = entries.filter(e => seen.has(e.accession) ? false : (seen.add(e.accession), true));
+  console.log(`  Atom feed: ${uniq.length} 条 SC/SCHEDULE 13D/G`);
 
   const newFilings = [];
-  for (const e of entries) {
+  for (const e of uniq) {
     if (existingIds.has(e.accession)) continue;
 
     // accession 前 10 位是提交方 CIK
@@ -253,7 +312,7 @@ async function fetchCompany(company, existingIds) {
       id:          e.accession,
       ticker:      company.ticker,
       company:     company.name,
-      formType:    e.formType,
+      formType:    normalizeFormType(e.formType),
       filedDate:   e.filedDate,
       eventDate:   null,
       filerName:   null,
