@@ -102,11 +102,29 @@
     /* ── Tabulator Overrides ───────────────────────────── */
     #filings-table .tabulator-header { background: #f8fafc; border-bottom: 2px solid #e2e8f0; }
     #filings-table .tabulator-header .tabulator-col { border-right: 1px solid #e9ecef; }
-    #filings-table .tabulator-header .tabulator-col-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: #475569; }
+    #filings-table .tabulator-header .tabulator-col-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: #475569; white-space: normal; line-height: 1.4; }
     #filings-table .tabulator-row { border-bottom: 1px solid #f1f5f9; }
     #filings-table .tabulator-row:hover { background: #f8faff !important; }
     #filings-table .tabulator-row.tabulator-row-even { background: #fafbfd; }
     #filings-table .tabulator-cell { font-size: 13px; padding: 9px 12px; color: #334155; vertical-align: middle; }
+
+    /* ── Column Group: Form4披露 ───────────────────────────── */
+    #filings-table .tabulator-col-group.col-group-form4 {
+      background: #ecfdf5 !important;
+      border-left: 2px solid #6ee7b7 !important;
+    }
+    #filings-table .tabulator-col-group.col-group-form4 .tabulator-col-title { color: #166534; }
+    #filings-table .tabulator-col.col-form4 { border-left: 1px solid #d1fae5 !important; background: #f5fef7 !important; }
+    #filings-table .tabulator-cell.col-form4 { background: rgba(236,253,245,0.35); }
+
+    /* ── Column Group: 13D&G披露 ───────────────────────────── */
+    #filings-table .tabulator-col-group.col-group-13dg {
+      background: #eff6ff !important;
+      border-left: 2px solid #93c5fd !important;
+    }
+    #filings-table .tabulator-col-group.col-group-13dg .tabulator-col-title { color: #1d4ed8; }
+    #filings-table .tabulator-col.col-13dg { border-left: 1px solid #dbeafe !important; background: #f5f9ff !important; }
+    #filings-table .tabulator-cell.col-13dg { background: rgba(239,246,255,0.35); }
 
     /* ── Form Type Badge ───────────────────────────────── */
     .badge {
@@ -440,24 +458,6 @@ async function init() {
           }
         },
         {
-          title: '本次交易股数',
-          field: 'txShares',
-          width: 130,
-          hozAlign: 'right',
-          headerHozAlign: 'right',
-          sorter: 'number',
-          formatter: cell => fmtTxShares(cell.getValue())
-        },
-        {
-          title: '成交价',
-          field: 'txPrice',
-          width: 80,
-          hozAlign: 'right',
-          headerHozAlign: 'right',
-          sorter: 'number',
-          formatter: cell => fmtPrice(cell.getValue())
-        },
-        {
           title: '持股数',
           field: 'sharesOwned',
           width: 130,
@@ -467,31 +467,65 @@ async function init() {
           formatter: cell => fmtShares(cell.getValue())
         },
         {
-          title: '占总股本',
+          title: '占所披露Class总股本',
           field: 'pctOwned',
-          width: 85,
+          width: 120,
           hozAlign: 'right',
           headerHozAlign: 'right',
           sorter: 'number',
           formatter: cell => fmtPct(cell.getValue())
         },
         {
-          title: '股数变动',
-          field: 'sharesDelta',
-          width: 140,
-          hozAlign: 'right',
-          headerHozAlign: 'right',
-          sorter: 'number',
-          formatter: cell => fmtDeltaShares(cell.getValue())
+          title: 'Form4披露',
+          cssClass: 'col-group-form4',
+          columns: [
+            {
+              title: '本次交易股数',
+              field: 'txShares',
+              width: 130,
+              hozAlign: 'right',
+              headerHozAlign: 'right',
+              sorter: 'number',
+              cssClass: 'col-form4',
+              formatter: cell => fmtTxShares(cell.getValue())
+            },
+            {
+              title: '成交价',
+              field: 'txPrice',
+              width: 80,
+              hozAlign: 'right',
+              headerHozAlign: 'right',
+              sorter: 'number',
+              cssClass: 'col-form4',
+              formatter: cell => fmtPrice(cell.getValue())
+            },
+          ]
         },
         {
-          title: '% 变动',
-          field: 'pctDelta',
-          width: 85,
-          hozAlign: 'right',
-          headerHozAlign: 'right',
-          sorter: 'number',
-          formatter: cell => fmtDeltaPct(cell.getValue())
+          title: '13D&G披露',
+          cssClass: 'col-group-13dg',
+          columns: [
+            {
+              title: '股数变动',
+              field: 'sharesDelta',
+              width: 140,
+              hozAlign: 'right',
+              headerHozAlign: 'right',
+              sorter: 'number',
+              cssClass: 'col-13dg',
+              formatter: cell => fmtDeltaShares(cell.getValue())
+            },
+            {
+              title: '% 变动',
+              field: 'pctDelta',
+              width: 85,
+              hozAlign: 'right',
+              headerHozAlign: 'right',
+              sorter: 'number',
+              cssClass: 'col-13dg',
+              formatter: cell => fmtDeltaPct(cell.getValue())
+            },
+          ]
         },
         {
           title: '原文',
