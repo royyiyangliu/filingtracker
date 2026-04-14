@@ -95,7 +95,8 @@ function findPrimaryDoc(html) {
     const re = new RegExp(`href="(\\/Archives\\/edgar\\/data\\/[^"]+\\.${ext})"`, 'gi');
     let m;
     while ((m = re.exec(html)) !== null) {
-      if (!m[1].toLowerCase().includes('-index')) {
+      const p = m[1].toLowerCase();
+      if (!p.includes('-index') && !p.includes('/xsl')) {
         return base + m[1];
       }
     }
