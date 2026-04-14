@@ -170,14 +170,14 @@ function parseForm4(xml) {
 
 // ── 新格式 XML 解析（SCHEDULE 13G/D，2025 年起）────────────────────────────
 
+/**
+ * 返回 { pages: [{filerName, sharesOwned, pctOwned}], eventDate }
+ * 每个 <coverPageHeaderReportingPersonDetails> 块对应一个申报人
+ */
 function parseXmlDoc(xml) {
-  function tag(t)  { const m = xml.match(new RegExp(`<${t}[^>]*>([^<]+)</${t}>`,'i')); return m ? m[1].trim() : null; }
-  function tags(t) { return [...xml.matchAll(new RegExp(`<${t}[^>]*>([^<]+)</${t}>`,'gi'))].map(m=>m[1].trim()); }
+  function tag(t) { const m = xml.match(new RegExp(`<${t}[^>]*>([^<]+)</${t}>`,'i')); return m ? m[1].trim() : null; }
 
-  // 申报人：取所有 reportingPersonName，第一个即主申报人
-  const filerName = tag('reportingPersonName');
-
-  // 持仓截止日：MM/DD/YYYY 转 YYYY-MM-DD
+  // 持仓截止日（文档级别，所有申报人共用）
   let eventDate = null;
   const rawDate = tag('eventDateRequiresFilingThisStatement');
   if (rawDate) {
@@ -185,21 +185,30 @@ function parseXmlDoc(xml) {
     if (p) eventDate = `${p[3]}-${p[1].padStart(2,'0')}-${p[2].padStart(2,'0')}`;
   }
 
-  // 持股数：取所有 reportingPersonBeneficiallyOwnedAggregateNumberOfShares，取最大值
-  let sharesOwned = null;
-  for (const v of tags('reportingPersonBeneficiallyOwnedAggregateNumberOfShares')) {
-    const n = parseNum(v);
-    if (n !== null && (sharesOwned === null || n > sharesOwned)) sharesOwned = n;
+  // 按 <coverPageHeaderReportingPersonDetails> 块解析每个申报人
+  const pages = [];
+  const blockRe = /<coverPageHeaderReportingPersonDetails>([\s\S]*?)<\/coverPageHeaderReportingPersonDetails>/gi;
+  let m;
+  while ((m = blockRe.exec(xml)) !== null) {
+    const blk = m[1];
+    const btag = t => { const r = blk.match(new RegExp(`<${t}[^>]*>([^<]+)</${t}>`,'i')); return r ? r[1].trim() : null; };
+    pages.push({
+      filerName:   btag('reportingPersonName'),
+      sharesOwned: parseNum(btag('reportingPersonBeneficiallyOwnedAggregateNumberOfShares')),
+      pctOwned:    parsePct(btag('classPercent')),
+    });
   }
 
-  // 占总股本：取所有 classPercent，取最大值
-  let pctOwned = null;
-  for (const v of tags('classPercent')) {
-    const n = parsePct(v);
-    if (n !== null && (pctOwned === null || n > pctOwned)) pctOwned = n;
+  // 兜底：老版 XML 没有 coverPage 块时，退化为全文单次匹配
+  if (pages.length === 0) {
+    pages.push({
+      filerName:   tag('reportingPersonName'),
+      sharesOwned: parseNum(tag('reportingPersonBeneficiallyOwnedAggregateNumberOfShares')),
+      pctOwned:    parsePct(tag('classPercent')),
+    });
   }
 
-  return { filerName, eventDate, sharesOwned, pctOwned };
+  return { pages, eventDate };
 }
 
 // ── 文档解析 ──────────────────────────────────────────────────────────────────
@@ -224,15 +233,14 @@ function parsePct(s) {
 }
 
 /**
- * 从文档文本提取关键字段
+ * 从文档文本提取所有封面页数据
+ * 返回 { pages: [{filerName, sharesOwned, pctOwned}], eventDate }
  *
- * 持股数/占比：取文档中所有封面页的最大值
- *   - 单一申报人：只有一个值，直接取
- *   - GROUP 申报：多个子实体 + 一个合并实体（通常值最大），取最大值即为集团合计
+ * 核心改动：不再全局取最大值，而是把文档按"Name of Reporting Person(s)"标签
+ * 切成若干封面页块，每块内独立提取 (name, shares, pct)，保证三者来自同一页。
  */
 function parseDoc(text) {
-  // 持仓截止日期（Date of Event）
-  // 文档格式：日期出现在 "(Date of Event...)" 标签之前
+  // 持仓截止日（文档级别）
   const MONTHS = {january:'01',february:'02',march:'03',april:'04',may:'05',june:'06',
                   july:'07',august:'08',september:'09',october:'10',november:'11',december:'12'};
   let eventDate = null;
@@ -250,85 +258,149 @@ function parseDoc(text) {
     }
   }
 
-  // 申报人姓名（第一个 "NAME OF REPORTING PERSON" — 主申报人/第一封面页）
-  let filerName = null;
-  const nmM = text.match(/NAME OF REPORTING PERSON\s+([A-Za-z][^\d\n\r]{2,80}?)(?=\s+\d\s+CHECK|\s+I\.R\.S\.|\s+SEC USE)/i);
-  if (nmM) filerName = nmM[1].trim().replace(/\s+/g, ' ');
-  // 纯文本 SC 13G 格式 "(1) Names of reporting persons."
-  if (!filerName) {
-    const nm2 = text.match(/\(?1\)?\s*Names? of (?:reporting )?persons?\s*[.:]?\s*([^\n\r(]{3,80})/i);
-    if (nm2) filerName = nm2[1].trim();
+  // 找到所有封面页起始位置（支持全大写和混合大小写两种格式）
+  const labelRe = /(?:NAME\s+OF\s+REPORTING\s+PERSON[S]?|Names?\s+of\s+(?:Reporting\s+)?Persons?)\s*:?\s*/gi;
+  const labels  = [...text.matchAll(labelRe)];
+
+  const pages = [];
+
+  if (labels.length > 0) {
+    for (let i = 0; i < labels.length; i++) {
+      // 每个封面页块：从标签结尾到下一个标签起始（或 +4000 字符）
+      const contentStart = labels[i].index + labels[i][0].length;
+      const blockEnd     = i + 1 < labels.length ? labels[i + 1].index : Math.min(contentStart + 4000, text.length);
+      const blk          = text.slice(contentStart, blockEnd);
+
+      // 申报人名称：只取字母/空格/标点，遇到数字即停（数字是下一行行号）
+      const nameM    = blk.match(/^([A-Za-z][A-Za-z .,'\-]{1,79})/);
+      const filerName = nameM ? nameM[1].trim().replace(/\s+/g, ' ') : null;
+
+      // 持股数（优先全大写格式，兜底混合大小写）
+      const shM = blk.match(/AGGREGATE AMOUNT BENEFICIALLY OWNED[\s\S]{0,80}?(\d[\d,]{2,})/i)
+               || blk.match(/Amount beneficially owned:?\s*(\d[\d,]{2,})/i);
+      const sharesOwned = shM ? parseNum(shM[1]) : null;
+
+      // 占总股本%
+      const pcM = blk.match(/PERCENT OF CLASS[^%]{0,200}?(\d+\.?\d*)\s*%/i)
+               || blk.match(/Percent of class[\s\S]{0,80}?(\d+\.?\d*)\s*%/i);
+      const pctOwned = pcM ? parsePct(pcM[1]) : null;
+
+      pages.push({ filerName, sharesOwned, pctOwned });
+    }
   }
 
-  // 持股数：找所有封面页 "AGGREGATE AMOUNT BENEFICIALLY OWNED"，取最大值
-  let sharesOwned = null;
-  const shRe = /AGGREGATE AMOUNT BENEFICIALLY OWNED[\s\S]{0,80}?(\d[\d,]*)/gi;
-  let shM;
-  while ((shM = shRe.exec(text)) !== null) {
-    const n = parseNum(shM[1]);
-    if (n !== null && (sharesOwned === null || n > sharesOwned)) sharesOwned = n;
-  }
-  // 纯文本 13G 备用格式
-  if (sharesOwned === null) {
-    const alt = text.match(/Amount beneficially owned:\s*(\d[\d,]*)/i);
-    if (alt) sharesOwned = parseNum(alt[1]);
-  }
-
-  // 占总股本%：找所有封面页，取最大值
-  let pctOwned = null;
-  const pcRe = /PERCENT OF CLASS[^%]{0,200}?(\d+\.?\d*)\s*%/gi;
-  let pcM;
-  while ((pcM = pcRe.exec(text)) !== null) {
-    const n = parsePct(pcM[1]);
-    if (n !== null && (pctOwned === null || n > pctOwned)) pctOwned = n;
-  }
-  // 纯文本 13G 备用格式
-  if (pctOwned === null) {
-    const alt = text.match(/Percent of class[\s\S]{0,80}?(\d+\.?\d*)\s*%/i);
-    if (alt) pctOwned = parsePct(alt[1]);
+  // 兜底：找不到任何封面页标签 → 全文取一次（老式纯文本格式）
+  if (pages.length === 0) {
+    let sharesOwned = null;
+    const shRe = /AGGREGATE AMOUNT BENEFICIALLY OWNED[\s\S]{0,80}?(\d[\d,]*)/gi;
+    let shM;
+    while ((shM = shRe.exec(text)) !== null) {
+      const n = parseNum(shM[1]);
+      if (n !== null && (sharesOwned === null || n > sharesOwned)) sharesOwned = n;
+    }
+    if (sharesOwned === null) {
+      const alt = text.match(/Amount beneficially owned:\s*(\d[\d,]*)/i);
+      if (alt) sharesOwned = parseNum(alt[1]);
+    }
+    const pcM = text.match(/PERCENT OF CLASS[^%]{0,200}?(\d+\.?\d*)\s*%/i)
+             || text.match(/Percent of class[\s\S]{0,80}?(\d+\.?\d*)\s*%/i);
+    pages.push({ filerName: null, sharesOwned, pctOwned: pcM ? parsePct(pcM[1]) : null });
   }
 
-  return { filerName, eventDate, sharesOwned, pctOwned };
+  return { pages, eventDate };
+}
+
+/**
+ * 判断 GROUP filing 是"机构母子结构"还是"独立个体联合"
+ *
+ * 机构母子（Scenario B）：所有申报人名称含共同关键词（如都含"BlackRock"）
+ *   → 取持股最多那条（母公司合并口径），返回单条
+ *
+ * 独立个体（Scenario A）：名称无共同关键词（如 Jack Ma + Tsai Joseph C）
+ *   → 每人独立，返回全部
+ */
+function groupOrSplit(pages) {
+  if (pages.length <= 1) return pages;
+
+  const STOP = new Set([
+    'inc', 'ltd', 'llc', 'lp', 'corp', 'plc', 'gmbh', 'bv',
+    'fund', 'funds', 'trust', 'group', 'holdings', 'holding',
+    'management', 'advisors', 'advisor', 'capital', 'partners', 'partner',
+    'investment', 'investments', 'asset', 'assets', 'securities',
+    'financial', 'company', 'international', 'global', 'limited',
+    'association', 'bank', 'the', 'and', 'for', 'of',
+  ]);
+
+  const kws = pages.map(p =>
+    new Set((p.filerName || '').toLowerCase().split(/\W+/).filter(w => w.length > 3 && !STOP.has(w)))
+  );
+
+  // 若所有名称都有关键词且存在全员共享的关键词 → 同一机构
+  if (kws.every(s => s.size > 0)) {
+    const shared = [...kws[0]].find(w => kws.every(s => s.has(w)));
+    if (shared) {
+      // 取持股最多的一条（母公司合并口径）
+      return [pages.reduce((a, b) => (a.sharesOwned || 0) >= (b.sharesOwned || 0) ? a : b)];
+    }
+  }
+
+  // 独立个体 → 全部返回
+  return pages;
 }
 
 // ── 解析单条 filing：index → 主文档 → 提取字段 ───────────────────────────────
 
+/**
+ * 解析单条 filing，返回一个或多个记录（数组）
+ * - Form 4：始终单条
+ * - SC 13G/D：若是独立个体 GROUP，返回多条（每人一条）；机构母子返回一条
+ * 第一条复用原始对象 f；后续条目是 f 的浅拷贝，id 改为 accession#N
+ */
 async function enrichFiling(f) {
-  if (!f.edgarUrl) return;
+  if (!f.edgarUrl) return [f];
 
   const { status: is, body: iHtml } = await get(f.edgarUrl);
   await sleep(DELAY_MS);
-  if (is !== 200) return;
+  if (is !== 200) return [f];
 
   const docUrl = findPrimaryDoc(iHtml);
-  if (!docUrl) return;
+  if (!docUrl) return [f];
 
   const { status: ds, body: dBody } = await get(docUrl);
   await sleep(DELAY_MS);
-  if (ds !== 200) return;
+  if (ds !== 200) return [f];
 
-  // Form 4：XML 格式，走专属解析器
+  // Form 4：单申报人，直接赋值后返回
   if (f.formType === '4' || f.formType === '4/A') {
     const p = parseForm4(dBody);
-    if (p.filerName   && !f.filerName)  f.filerName    = p.filerName;
+    if (p.filerName)                    f.filerName    = p.filerName;
     if (p.eventDate   != null)          f.eventDate    = p.eventDate;
     if (p.insiderTitle)                 f.insiderTitle = p.insiderTitle;
     if (p.txCode)                       f.txCode       = p.txCode;
     if (p.txShares    != null)          f.txShares     = p.txShares;
     if (p.txPrice     != null)          f.txPrice      = p.txPrice;
     if (p.sharesOwned != null)          f.sharesOwned  = p.sharesOwned;
-    return;
+    return [f];
   }
 
-  // SC 13G/D：新格式（2025 起）为 XML，旧格式为 HTML/TXT
+  // SC 13G/D：解析所有封面页，再判断是否拆分
   const isXml = docUrl.toLowerCase().endsWith('.xml');
-  const p = isXml ? parseXmlDoc(dBody) : parseDoc(toText(dBody));
+  const { pages, eventDate } = isXml ? parseXmlDoc(dBody) : parseDoc(toText(dBody));
 
-  // 若已有申报人名称（旧数据库），保留；否则用解析结果填充
-  if (p.filerName && !f.filerName)  f.filerName  = p.filerName;
-  if (p.eventDate  != null)          f.eventDate  = p.eventDate;
-  if (p.sharesOwned != null)         f.sharesOwned = p.sharesOwned;
-  if (p.pctOwned   != null)          f.pctOwned   = p.pctOwned;
+  if (eventDate) f.eventDate = eventDate;
+  if (!pages.length) return [f];
+
+  const effectivePages = groupOrSplit(pages);
+
+  return effectivePages.map((page, idx) => {
+    // 第一条：直接修改原始对象 f
+    // 后续条：浅拷贝 + 修改 id（accession#1, #2…）
+    const rec = idx === 0 ? f : { ...f, id: `${f.accession}#${idx}` };
+    if (page.filerName)           rec.filerName  = page.filerName;
+    if (page.sharesOwned != null) rec.sharesOwned = page.sharesOwned;
+    if (page.pctOwned    != null) rec.pctOwned    = page.pctOwned;
+    return rec;
+  });
 }
 
 // ── 变动量计算 ────────────────────────────────────────────────────────────────
@@ -395,12 +467,12 @@ async function fetchCompany(company, existingIds) {
       eventDate:    null,
       filerName:    null,
       filerCik,
-      insiderTitle: null,   // Form 4：申报人职务
-      txCode:       null,   // Form 4：交易类型（S/P/M/F…）
-      txShares:     null,   // Form 4：本次净交易股数（正=买/行权，负=卖）
-      txPrice:      null,   // Form 4：S/P 成交均价（美元）
-      sharesOwned:  null,   // 13G：总持股数；Form 4：交易后持股
-      pctOwned:     null,   // 13G：占总股本%（Form 4 无）
+      insiderTitle: null,
+      txCode:       null,
+      txShares:     null,
+      txPrice:      null,
+      sharesOwned:  null,
+      pctOwned:     null,
       sharesDelta:  null,
       pctDelta:     null,
       edgarUrl:     e.indexUrl,
@@ -409,12 +481,15 @@ async function fetchCompany(company, existingIds) {
 
     console.log(`  NEW ${e.formType} ${e.filedDate}  ${e.accession}`);
     try {
-      await enrichFiling(f);
-      console.log(`    申报人: ${f.filerName || '?'}  持股: ${f.sharesOwned ?? '?'}  占比: ${f.pctOwned ?? '?'}%`);
+      const records = await enrichFiling(f);
+      for (const rec of records) {
+        console.log(`    申报人: ${rec.filerName || '?'}  持股: ${rec.sharesOwned ?? '?'}  占比: ${rec.pctOwned ?? '?'}%`);
+        newFilings.push(rec);
+      }
     } catch (e2) {
       console.log(`    解析失败: ${e2.message}`);
+      newFilings.push(f);
     }
-    newFilings.push(f);
   }
 
   return newFilings;
@@ -435,7 +510,10 @@ async function main() {
     catch (_) { console.warn('[警告] 数据文件损坏，从空白开始\n'); }
   }
 
-  const existingIds = new Set(db.filings.map(f => f.id).filter(Boolean));
+  // existingIds：完整 id（含 #N 后缀）用于去重子记录
+  // existingBaseIds：基础 accession（去掉 #N）用于跳过已处理的 filing
+  const existingIds     = new Set(db.filings.map(f => f.id).filter(Boolean));
+  const existingBaseIds = new Set(db.filings.map(f => (f.id || '').split('#')[0]).filter(Boolean));
   console.log(`已有记录: ${db.filings.length} 条 | 追踪公司: ${companies.length} 家\n`);
 
   // ── 补充历史数据（首次运行，或有旧记录缺少持股字段）─────────────────────
@@ -443,15 +521,24 @@ async function main() {
   if (toBackfill.length > 0) {
     console.log(`补充历史持股数据: ${toBackfill.length} 条记录...\n`);
     let i = 0;
+    const backfillExtras = []; // GROUP filing 拆分产生的额外新记录
     for (const f of toBackfill) {
       i++;
       process.stdout.write(`  [${i}/${toBackfill.length}] ${f.ticker} ${f.filedDate}  `);
       try {
-        await enrichFiling(f);
+        const records = await enrichFiling(f);
+        // records[0] === f（已原地修改），records[1..] 是拆分的新子记录
+        for (let j = 1; j < records.length; j++) {
+          if (!existingIds.has(records[j].id)) backfillExtras.push(records[j]);
+        }
         console.log(`shares=${f.sharesOwned ?? '?'}  pct=${f.pctOwned ?? '?'}%`);
       } catch (e) {
         console.log(`错误: ${e.message}`);
       }
+    }
+    if (backfillExtras.length) {
+      db.filings.push(...backfillExtras);
+      console.log(`  + ${backfillExtras.length} 条 GROUP 拆分新记录`);
     }
     console.log('\n历史数据补充完成\n');
   }
@@ -462,7 +549,7 @@ async function main() {
     const co = companies[i];
     process.stdout.write(`[${i + 1}/${companies.length}] ${co.ticker} — `);
     try {
-      const fresh = await fetchCompany(co, existingIds);
+      const fresh = await fetchCompany(co, existingBaseIds);
       allNew.push(...fresh);
       console.log(`+${fresh.length} 条新记录`);
     } catch (e) {
