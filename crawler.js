@@ -18,9 +18,11 @@ const DELAY_MS       = 150;   // ~6 req/s，远低于 EDGAR 限速 10 req/s
 
 // 旧格式（2024 及之前）：SC 13D / SC 13G
 // 新格式（2025 起 SEC 强制结构化提交）：SCHEDULE 13D / SCHEDULE 13G
+// 内部人交易披露
 const VALID_FORMS = new Set([
   'SC 13D', 'SC 13D/A', 'SC 13G', 'SC 13G/A',
   'SCHEDULE 13D', 'SCHEDULE 13D/A', 'SCHEDULE 13G', 'SCHEDULE 13G/A',
+  '4', '4/A',
 ]);
 
 // 前端展示统一用短格式（去掉 SCHEDULE 前缀）
@@ -102,6 +104,68 @@ function findPrimaryDoc(html) {
     }
   }
   return null;
+}
+
+// ── Form 4 XML 解析（内部人交易）─────────────────────────────────────────────
+
+/**
+ * 从 Form 4 XML 提取关键字段
+ * 一份 Form 4 对应一个申报人，可含多笔 nonDerivativeTransaction
+ * 汇总全部非衍生品交易：净股数、最终持仓、主要交易类型、成交均价
+ */
+function parseForm4(xml) {
+  const filerName  = (xml.match(/<rptOwnerName>([^<]+)<\/rptOwnerName>/i)   || [])[1]?.trim() || null;
+  const eventDate  = (xml.match(/<periodOfReport>([^<]+)<\/periodOfReport>/i) || [])[1]?.trim() || null;
+
+  // 职务
+  const isDir    = /<isDirector>1<\/isDirector>/i.test(xml);
+  const is10Pct  = /<isTenPercentOwner>1<\/isTenPercentOwner>/i.test(xml);
+  const titleM   = xml.match(/<officerTitle>([^<]+)<\/officerTitle>/i);
+  const roles    = [];
+  if (isDir) roles.push('Director');
+  if (titleM) roles.push(titleM[1].trim());
+  if (is10Pct) roles.push('>10% Owner');
+  const insiderTitle = roles.join(' / ') || null;
+
+  // 汇总所有 nonDerivativeTransaction
+  const TX_PRIORITY = { S: 5, P: 4, M: 3, F: 2, A: 1 };
+  let netShares = 0, lastSharesOwned = null;
+  let primaryTxCode = null, primaryPriority = 0;
+  let totalValue = 0, pricedShares = 0;
+
+  const blocks = [...xml.matchAll(/<nonDerivativeTransaction>([\s\S]*?)<\/nonDerivativeTransaction>/gi)];
+  for (const [, blk] of blocks) {
+    const code    = (blk.match(/<transactionCode>([^<]+)<\/transactionCode>/i)                              || [])[1]?.trim();
+    const sharesV = (blk.match(/<transactionShares>[\s\S]*?<value>([^<]+)<\/value>/i)                       || [])[1]?.trim();
+    const adCode  = (blk.match(/<transactionAcquiredDisposedCode>[\s\S]*?<value>([^<]+)<\/value>/i)         || [])[1]?.trim();
+    const priceV  = (blk.match(/<transactionPricePerShare>[\s\S]*?<value>([^<]+)<\/value>/i)                || [])[1]?.trim();
+    const postV   = (blk.match(/<sharesOwnedFollowingTransaction>[\s\S]*?<value>([^<]+)<\/value>/i)         || [])[1]?.trim();
+
+    const shares = parseNum(sharesV);
+    if (shares !== null) {
+      netShares += (adCode === 'D' ? -shares : shares);
+      const price = priceV ? parseFloat(priceV) : NaN;
+      if (!isNaN(price) && price > 0 && (code === 'S' || code === 'P')) {
+        totalValue  += price * shares;
+        pricedShares += shares;
+      }
+      const prio = TX_PRIORITY[code] || 0;
+      if (prio > primaryPriority) { primaryTxCode = code; primaryPriority = prio; }
+    }
+    if (postV) lastSharesOwned = parseNum(postV);
+  }
+
+  const txPrice = pricedShares > 0 ? Math.round(totalValue / pricedShares * 100) / 100 : null;
+
+  return {
+    filerName,
+    eventDate,
+    insiderTitle,
+    txCode:     primaryTxCode,
+    txShares:   netShares !== 0 ? netShares : null,
+    txPrice,
+    sharesOwned: lastSharesOwned,
+  };
 }
 
 // ── 新格式 XML 解析（SCHEDULE 13G/D，2025 年起）────────────────────────────
@@ -243,7 +307,20 @@ async function enrichFiling(f) {
   await sleep(DELAY_MS);
   if (ds !== 200) return;
 
-  // 新格式（2025 起）为 XML，旧格式为 HTML/TXT
+  // Form 4：XML 格式，走专属解析器
+  if (f.formType === '4' || f.formType === '4/A') {
+    const p = parseForm4(dBody);
+    if (p.filerName   && !f.filerName)  f.filerName    = p.filerName;
+    if (p.eventDate   != null)          f.eventDate    = p.eventDate;
+    if (p.insiderTitle)                 f.insiderTitle = p.insiderTitle;
+    if (p.txCode)                       f.txCode       = p.txCode;
+    if (p.txShares    != null)          f.txShares     = p.txShares;
+    if (p.txPrice     != null)          f.txPrice      = p.txPrice;
+    if (p.sharesOwned != null)          f.sharesOwned  = p.sharesOwned;
+    return;
+  }
+
+  // SC 13G/D：新格式（2025 起）为 XML，旧格式为 HTML/TXT
   const isXml = docUrl.toLowerCase().endsWith('.xml');
   const p = isXml ? parseXmlDoc(dBody) : parseDoc(toText(dBody));
 
@@ -290,7 +367,7 @@ async function fetchCompany(company, existingIds) {
                `&dateb=&owner=include&count=100&output=atom`;
 
   const entries = [];
-  for (const type of ['SC+13', 'SCHEDULE+13']) {
+  for (const type of ['SC+13', 'SCHEDULE+13', '4']) {
     const { status, body } = await get(`${base}&type=${type}`);
     await sleep(DELAY_MS);
     if (status !== 200) { console.log(`  Atom feed [${type}] 错误: HTTP ${status}`); continue; }
@@ -310,20 +387,24 @@ async function fetchCompany(company, existingIds) {
     const filerCik = e.accession.replace(/-/g, '').slice(0, 10);
 
     const f = {
-      id:          e.accession,
-      ticker:      company.ticker,
-      company:     company.name,
-      formType:    normalizeFormType(e.formType),
-      filedDate:   e.filedDate,
-      eventDate:   null,
-      filerName:   null,
+      id:           e.accession,
+      ticker:       company.ticker,
+      company:      company.name,
+      formType:     normalizeFormType(e.formType),
+      filedDate:    e.filedDate,
+      eventDate:    null,
+      filerName:    null,
       filerCik,
-      sharesOwned: null,
-      pctOwned:    null,
-      sharesDelta: null,
-      pctDelta:    null,
-      edgarUrl:    e.indexUrl,
-      accession:   e.accession,
+      insiderTitle: null,   // Form 4：申报人职务
+      txCode:       null,   // Form 4：交易类型（S/P/M/F…）
+      txShares:     null,   // Form 4：本次净交易股数（正=买/行权，负=卖）
+      txPrice:      null,   // Form 4：S/P 成交均价（美元）
+      sharesOwned:  null,   // 13G：总持股数；Form 4：交易后持股
+      pctOwned:     null,   // 13G：占总股本%（Form 4 无）
+      sharesDelta:  null,
+      pctDelta:     null,
+      edgarUrl:     e.indexUrl,
+      accession:    e.accession,
     };
 
     console.log(`  NEW ${e.formType} ${e.filedDate}  ${e.accession}`);
