@@ -1,245 +1,351 @@
 'use strict';
 
 /**
- * SEC Filing Crawler
- * 追踪 17 家中概股的 Schedule 13D/G（及 Form 4）披露变化
- * 数据来源：SEC EDGAR Full-Text Search API (EFTS)
+ * SEC Filing Crawler v2
+ * 数据来源：EDGAR Atom Feed（按日期降序，覆盖全部历史）
+ * 每条 filing 解析：申报人、持仓截止日、持股数、占总股本%
+ * 首次运行自动补充历史数据；之后每次只处理新 filing
  */
 
 const https = require('https');
 const fs    = require('fs');
 const path  = require('path');
 
-// ─── 配置 ──────────────────────────────────────────────────────────────────────
-const COMPANIES_FILE  = path.join(__dirname, 'companies.json');
-const DATA_FILE       = path.join(__dirname, 'data', 'filings.json');
-const USER_AGENT      = 'SEC-Filing-Tracker/1.0 research contact@researchuse.com';
-const DELAY_MS        = 350;          // 每次请求间隔（EDGAR 限速 10 req/s，保守用 350ms）
-const PAGE_SIZE       = 20;           // EFTS 单页结果数
-const MAX_PAGES       = 30;           // 单公司最大翻页数（600 条上限）
-const FORM_FILTER     = 'SC+13D%2CSC+13D%2FA%2CSC+13G%2CSC+13G%2FA%2C4%2C4%2FA';
-const VALID_FORMS     = new Set(['SC 13D', 'SC 13D/A', 'SC 13G', 'SC 13G/A', '4', '4/A']);
+const COMPANIES_FILE = path.join(__dirname, 'companies.json');
+const DATA_FILE      = path.join(__dirname, 'data', 'filings.json');
+const UA             = 'SEC-Filing-Tracker/2.0 research-contact@researchuse.com';
+const DELAY_MS       = 150;   // ~6 req/s，远低于 EDGAR 限速 10 req/s
+const VALID_FORMS    = new Set(['SC 13D', 'SC 13D/A', 'SC 13G', 'SC 13G/A']);
 
-// ─── HTTP ──────────────────────────────────────────────────────────────────────
+// ── 工具 ───────────────────────────────────────────────────────────────────────
+
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-async function httpsGet(url, retries = 3) {
+async function get(url, retries = 3) {
   return new Promise((resolve, reject) => {
     const req = https.get(url, {
-      headers: { 'User-Agent': USER_AGENT, 'Accept': '*/*', 'Accept-Encoding': 'identity' },
+      headers: { 'User-Agent': UA, 'Accept-Encoding': 'identity' },
       timeout: 30000
     }, res => {
       if ([301, 302, 307, 308].includes(res.statusCode)) {
         res.resume();
         const loc = res.headers.location;
         if (!loc) return reject(new Error('Redirect without location'));
-        return httpsGet(loc.startsWith('http') ? loc : 'https://www.sec.gov' + loc, retries)
+        return get(loc.startsWith('http') ? loc : 'https://www.sec.gov' + loc, retries)
           .then(resolve).catch(reject);
       }
       const chunks = [];
       res.on('data', c => chunks.push(c));
       res.on('end', async () => {
         const body = Buffer.concat(chunks).toString('utf8');
-        // 对 EDGAR 偶发 500 自动重试
-        if (res.statusCode === 500 && retries > 0) {
+        if ([500, 503].includes(res.statusCode) && retries > 0) {
+          console.log(`    HTTP ${res.statusCode} — 重试`);
           await sleep(3000);
-          return httpsGet(url, retries - 1).then(resolve).catch(reject);
+          return get(url, retries - 1).then(resolve).catch(reject);
         }
         resolve({ status: res.statusCode, body });
       });
+      res.on('error', reject);
     });
     req.on('timeout', () => { req.destroy(); reject(new Error('Timeout')); });
     req.on('error', async e => {
-      if (retries > 0) { await sleep(2000); return httpsGet(url, retries - 1).then(resolve).catch(reject); }
+      if (retries > 0) { await sleep(2000); return get(url, retries - 1).then(resolve).catch(reject); }
       reject(e);
     });
   });
 }
 
-// ─── EDGAR 工具 ────────────────────────────────────────────────────────────────
+// ── Atom Feed 解析 ────────────────────────────────────────────────────────────
 
-/** 标准化表格类型字符串 */
-function normalizeForm(raw) {
-  const t = (raw || '').toUpperCase().trim();
-  return VALID_FORMS.has(t) ? t : null;
+function parseAtom(xml) {
+  const entries = [];
+  const re = /<entry>([\s\S]*?)<\/entry>/g;
+  let m;
+  while ((m = re.exec(xml)) !== null) {
+    const b = m[1];
+    const type = (b.match(/<filing-type>([^<]+)/) || [])[1]?.trim();
+    if (!type || !VALID_FORMS.has(type)) continue;
+    const accn = (b.match(/<accession-number>([^<]+)/) || [])[1]?.trim();
+    const date = (b.match(/<filing-date>([^<]+)/)     || [])[1]?.trim();
+    const href = (b.match(/<filing-href>([^<]+)/)     || [])[1]?.trim();
+    if (!accn || !date) continue;
+    entries.push({ formType: type, accession: accn, filedDate: date, indexUrl: href || '' });
+  }
+  return entries;
+}
+
+// ── Index 页 → 主文档 URL ────────────────────────────────────────────────────
+
+function findPrimaryDoc(html) {
+  // 取"Document Format Files"表格中第一个 .htm/.txt 链接（即 Seq=1 主文档）
+  const re = /href="(\/Archives\/edgar\/data\/[^"]+\.(htm|txt))"/gi;
+  let m;
+  while ((m = re.exec(html)) !== null) {
+    if (!m[1].toLowerCase().includes('-index')) {
+      return 'https://www.sec.gov' + m[1];
+    }
+  }
+  return null;
+}
+
+// ── 文档解析 ──────────────────────────────────────────────────────────────────
+
+function toText(html) {
+  return html
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;|&#160;/g, ' ')
+    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/&#\d+;|&[a-z]+;/gi, ' ')
+    .replace(/\s+/g, ' ').trim();
+}
+
+function parseNum(s) {
+  const n = parseInt(String(s || '').replace(/[,\s]/g, ''), 10);
+  return isNaN(n) ? null : n;
+}
+
+function parsePct(s) {
+  const n = parseFloat(String(s || '').replace(/[%,\s]/g, ''));
+  return isNaN(n) ? null : n;
 }
 
 /**
- * 从 EFTS display_names 中提取"申报人"信息
- * display_names 格式：["COMPANY NAME  (TICKER)  (CIK 0001234567)", ...]
- * 申报人 = 非目标公司的那一方
+ * 从文档文本提取关键字段
+ *
+ * 持股数/占比：取文档中所有封面页的最大值
+ *   - 单一申报人：只有一个值，直接取
+ *   - GROUP 申报：多个子实体 + 一个合并实体（通常值最大），取最大值即为集团合计
  */
-function extractFiler(displayNames, targetCikFull, targetCikNoZero) {
-  for (const entry of displayNames) {
-    // 跳过目标公司
-    if (entry.includes(targetCikFull) || entry.includes('(' + targetCikNoZero + ')')) continue;
-    // 提取姓名（括号前部分）
-    const m = entry.match(/^(.*?)\s*(?:\([A-Z][^)]*\)\s*)?\(CIK/);
-    const c = entry.match(/CIK\s+(\d+)/);
-    return {
-      name: m ? m[1].trim() : entry.split('(')[0].trim(),
-      cik:  c ? c[1].padStart(10, '0') : ''
+function parseDoc(text) {
+  // 持仓截止日期（Date of Event）
+  // 文档格式：日期出现在 "(Date of Event...)" 标签之前
+  const MONTHS = {january:'01',february:'02',march:'03',april:'04',may:'05',june:'06',
+                  july:'07',august:'08',september:'09',october:'10',november:'11',december:'12'};
+  let eventDate = null;
+  const evM = text.match(/(\w+ \d{1,2},? \d{4})[^(]{0,120}\(?Date of Event/i)
+           || text.match(/(\d{4}-\d{2}-\d{2})[^(]{0,120}\(?Date of Event/i);
+  if (evM) {
+    const raw = evM[1].trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+      eventDate = raw;
+    } else {
+      const mp = raw.match(/^(\w+)\s+(\d{1,2}),?\s+(\d{4})$/);
+      if (mp && MONTHS[mp[1].toLowerCase()]) {
+        eventDate = `${mp[3]}-${MONTHS[mp[1].toLowerCase()]}-${mp[2].padStart(2, '0')}`;
+      }
+    }
+  }
+
+  // 申报人姓名（第一个 "NAME OF REPORTING PERSON" — 主申报人/第一封面页）
+  let filerName = null;
+  const nmM = text.match(/NAME OF REPORTING PERSON\s+([A-Za-z][^\d\n\r]{2,80}?)(?=\s+\d\s+CHECK|\s+I\.R\.S\.|\s+SEC USE)/i);
+  if (nmM) filerName = nmM[1].trim().replace(/\s+/g, ' ');
+  // 纯文本 SC 13G 格式 "(1) Names of reporting persons."
+  if (!filerName) {
+    const nm2 = text.match(/\(?1\)?\s*Names? of (?:reporting )?persons?\s*[.:]?\s*([^\n\r(]{3,80})/i);
+    if (nm2) filerName = nm2[1].trim();
+  }
+
+  // 持股数：找所有封面页 "AGGREGATE AMOUNT BENEFICIALLY OWNED"，取最大值
+  let sharesOwned = null;
+  const shRe = /AGGREGATE AMOUNT BENEFICIALLY OWNED[\s\S]{0,80}?(\d[\d,]*)/gi;
+  let shM;
+  while ((shM = shRe.exec(text)) !== null) {
+    const n = parseNum(shM[1]);
+    if (n !== null && (sharesOwned === null || n > sharesOwned)) sharesOwned = n;
+  }
+  // 纯文本 13G 备用格式
+  if (sharesOwned === null) {
+    const alt = text.match(/Amount beneficially owned:\s*(\d[\d,]*)/i);
+    if (alt) sharesOwned = parseNum(alt[1]);
+  }
+
+  // 占总股本%：找所有封面页，取最大值
+  let pctOwned = null;
+  const pcRe = /PERCENT OF CLASS[^%]{0,200}?(\d+\.?\d*)\s*%/gi;
+  let pcM;
+  while ((pcM = pcRe.exec(text)) !== null) {
+    const n = parsePct(pcM[1]);
+    if (n !== null && (pctOwned === null || n > pctOwned)) pctOwned = n;
+  }
+  // 纯文本 13G 备用格式
+  if (pctOwned === null) {
+    const alt = text.match(/Percent of class[\s\S]{0,80}?(\d+\.?\d*)\s*%/i);
+    if (alt) pctOwned = parsePct(alt[1]);
+  }
+
+  return { filerName, eventDate, sharesOwned, pctOwned };
+}
+
+// ── 解析单条 filing：index → 主文档 → 提取字段 ───────────────────────────────
+
+async function enrichFiling(f) {
+  if (!f.edgarUrl) return;
+
+  const { status: is, body: iHtml } = await get(f.edgarUrl);
+  await sleep(DELAY_MS);
+  if (is !== 200) return;
+
+  const docUrl = findPrimaryDoc(iHtml);
+  if (!docUrl) return;
+
+  const { status: ds, body: dBody } = await get(docUrl);
+  await sleep(DELAY_MS);
+  if (ds !== 200) return;
+
+  const p = parseDoc(toText(dBody));
+  // 若已有申报人名称（旧数据库），保留；否则用解析结果填充
+  if (p.filerName && !f.filerName)  f.filerName  = p.filerName;
+  if (p.eventDate  != null)          f.eventDate  = p.eventDate;
+  if (p.sharesOwned != null)         f.sharesOwned = p.sharesOwned;
+  if (p.pctOwned   != null)          f.pctOwned   = p.pctOwned;
+}
+
+// ── 变动量计算 ────────────────────────────────────────────────────────────────
+
+function calculateDeltas(filings) {
+  // 按申报日期升序处理，以便逐条计算 delta
+  const sorted = [...filings].sort((a, b) =>
+    (a.filedDate || '').localeCompare(b.filedDate || '') ||
+    (a.accession || '').localeCompare(b.accession || '')
+  );
+
+  const last = {}; // key → { sharesOwned, pctOwned }
+
+  for (const f of sorted) {
+    // 用规范化后的申报人名作为匹配键（比 CIK 更稳定，跨数据源一致）
+    const nameKey = (f.filerName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const key = `${f.ticker}||${nameKey || f.filerCik || f.accession}`;
+
+    const prev = last[key];
+    f.sharesDelta = (prev && f.sharesOwned != null && prev.sharesOwned != null)
+      ? f.sharesOwned - prev.sharesOwned : null;
+    f.pctDelta = (prev && f.pctOwned != null && prev.pctOwned != null)
+      ? Math.round((f.pctOwned - prev.pctOwned) * 1000) / 1000 : null;
+
+    if (f.sharesOwned != null || f.pctOwned != null) {
+      last[key] = { sharesOwned: f.sharesOwned, pctOwned: f.pctOwned };
+    }
+  }
+}
+
+// ── 拉取某公司的新 filing ─────────────────────────────────────────────────────
+
+async function fetchCompany(company, existingIds) {
+  const url = `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${company.cik}` +
+              `&type=SC+13&dateb=&owner=include&count=100&output=atom`;
+
+  const { status, body } = await get(url);
+  await sleep(DELAY_MS);
+  if (status !== 200) { console.log(`  Atom feed 错误: HTTP ${status}`); return []; }
+
+  const entries = parseAtom(body);
+  console.log(`  Atom feed: ${entries.length} 条 SC 13D/G`);
+
+  const newFilings = [];
+  for (const e of entries) {
+    if (existingIds.has(e.accession)) continue;
+
+    // accession 前 10 位是提交方 CIK
+    const filerCik = e.accession.replace(/-/g, '').slice(0, 10);
+
+    const f = {
+      id:          e.accession,
+      ticker:      company.ticker,
+      company:     company.name,
+      formType:    e.formType,
+      filedDate:   e.filedDate,
+      eventDate:   null,
+      filerName:   null,
+      filerCik,
+      sharesOwned: null,
+      pctOwned:    null,
+      sharesDelta: null,
+      pctDelta:    null,
+      edgarUrl:    e.indexUrl,
+      accession:   e.accession,
     };
-  }
-  return { name: '—', cik: '' };
-}
 
-/**
- * 根据 accession number 构建 EDGAR 申报索引页链接
- * 规则：acc 前 10 位（去前导零后）作为存储目录的 CIK
- */
-function buildEdgarUrl(adsh) {
-  if (!adsh || adsh.length < 18) return '';
-  const nodash  = adsh.replace(/-/g, '');
-  const cikNum  = parseInt(adsh.slice(0, 10), 10);
-  return `https://www.sec.gov/Archives/edgar/data/${cikNum}/${nodash}/${adsh}-index.htm`;
-}
-
-// ─── 核心搜索 ──────────────────────────────────────────────────────────────────
-
-/**
- * 用 EFTS 搜索某公司的相关申报，返回新记录列表
- * @param {object} company       公司对象 { ticker, cik, name, searchName }
- * @param {Set}    existingIds   已入库的 accession number set（本函数会更新它）
- */
-async function fetchCompanyFilings(company, existingIds) {
-  const { ticker, cik: cikFull, name, searchName } = company;
-  const cikNoZero = cikFull.replace(/^0+/, '');
-  const query     = encodeURIComponent('"' + searchName + '"');
-  const newRows   = [];
-
-  let from  = 0;
-  let total = Infinity;
-  let page  = 0;
-
-  while (from < total && page < MAX_PAGES) {
-    const url = `https://efts.sec.gov/LATEST/search-index?q=${query}` +
-                `&forms=${FORM_FILTER}&from=${from}&size=${PAGE_SIZE}`;
-    await sleep(DELAY_MS);
-
-    let res;
-    try { res = await httpsGet(url); }
-    catch (e) { console.warn(`  [网络错误] ${e.message}`); break; }
-
-    if (res.status !== 200) { console.warn(`  [HTTP ${res.status}]`); break; }
-
-    let data;
-    try { data = JSON.parse(res.body); }
-    catch (e) { console.warn(`  [JSON 解析失败]`); break; }
-
-    const hits = data.hits?.hits || [];
-    if (total === Infinity) {
-      total = data.hits?.total?.value ?? hits.length;
-      console.log(`  ${ticker}: EFTS 总命中 ${total} 条`);
+    console.log(`  NEW ${e.formType} ${e.filedDate}  ${e.accession}`);
+    try {
+      await enrichFiling(f);
+      console.log(`    申报人: ${f.filerName || '?'}  持股: ${f.sharesOwned ?? '?'}  占比: ${f.pctOwned ?? '?'}%`);
+    } catch (e2) {
+      console.log(`    解析失败: ${e2.message}`);
     }
-    if (hits.length === 0) break;
-
-    let newThisPage = 0;
-
-    for (const hit of hits) {
-      const src   = hit._source || {};
-      const adsh  = src.adsh || (hit._id || '').split(':')[0];
-      const form  = normalizeForm(src.form || src.file_type || '');
-      const filed = src.file_date || '';
-
-      if (!adsh || !filed || !form) continue;
-
-      // 过滤：确认目标公司 CIK 出现在此申报中
-      const ciks  = src.ciks       || [];
-      const names = src.display_names || [];
-      const isOur = ciks.some(c => c === cikFull || c === cikNoZero) ||
-                    names.some(n => n.includes(cikFull) || n.includes('(' + cikNoZero + ')'));
-      if (!isOur) continue;
-
-      // 去重
-      if (existingIds.has(adsh)) continue;
-      existingIds.add(adsh);
-      newThisPage++;
-
-      const filer = extractFiler(names, cikFull, cikNoZero);
-
-      newRows.push({
-        id:         adsh,
-        ticker,
-        company:    name,
-        formType:   form,
-        filedDate:  filed,
-        periodDate: src.period_ending || '',
-        filerName:  filer.name,
-        filerCik:   filer.cik,
-        edgarUrl:   buildEdgarUrl(adsh),
-        accession:  adsh
-      });
-    }
-
-    from += hits.length;
-    page++;
-
-    // 优化：如果翻过 3 页且全是已有数据，停止（数据一般按相关性排序，旧记录在后）
-    if (newThisPage === 0 && page >= 3) break;
+    newFilings.push(f);
   }
 
-  return newRows;
+  return newFilings;
 }
 
-// ─── 主程序 ────────────────────────────────────────────────────────────────────
+// ── 主程序 ────────────────────────────────────────────────────────────────────
 
 async function main() {
   console.log('╔══════════════════════════════════════╗');
-  console.log('║   SEC Filing Crawler  中概股追踪     ║');
+  console.log('║   SEC Filing Crawler v2  中概股追踪  ║');
   console.log('╚══════════════════════════════════════╝\n');
 
   const companies = JSON.parse(fs.readFileSync(COMPANIES_FILE, 'utf8'));
 
-  // 读取现有数据
-  let existing = { lastUpdated: null, totalCount: 0, filings: [] };
+  let db = { lastUpdated: null, totalCount: 0, filings: [] };
   if (fs.existsSync(DATA_FILE)) {
-    try { existing = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8')); }
-    catch (_) { console.warn('[警告] 现有数据文件损坏，从空白开始\n'); }
+    try { db = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8')); }
+    catch (_) { console.warn('[警告] 数据文件损坏，从空白开始\n'); }
   }
 
-  const isFirstRun = !existing.lastUpdated;
-  console.log(isFirstRun
-    ? '模式: 首次运行 — 抓取全部历史数据\n'
-    : `模式: 增量更新 — 上次运行: ${existing.lastUpdated.slice(0, 10)}\n`
-  );
-  console.log(`已有记录: ${existing.filings.length} 条 | 追踪公司: ${companies.length} 家\n`);
+  const existingIds = new Set(db.filings.map(f => f.id).filter(Boolean));
+  console.log(`已有记录: ${db.filings.length} 条 | 追踪公司: ${companies.length} 家\n`);
 
-  // 建立 accession 去重集合
-  const existingIds = new Set(existing.filings.map(f => f.id).filter(Boolean));
+  // ── 补充历史数据（首次运行，或有旧记录缺少持股字段）─────────────────────
+  const toBackfill = db.filings.filter(f => f.sharesOwned == null && f.pctOwned == null);
+  if (toBackfill.length > 0) {
+    console.log(`补充历史持股数据: ${toBackfill.length} 条记录...\n`);
+    let i = 0;
+    for (const f of toBackfill) {
+      i++;
+      process.stdout.write(`  [${i}/${toBackfill.length}] ${f.ticker} ${f.filedDate}  `);
+      try {
+        await enrichFiling(f);
+        console.log(`shares=${f.sharesOwned ?? '?'}  pct=${f.pctOwned ?? '?'}%`);
+      } catch (e) {
+        console.log(`错误: ${e.message}`);
+      }
+    }
+    console.log('\n历史数据补充完成\n');
+  }
 
-  // 逐公司抓取
+  // ── 拉取各公司的新 filing ─────────────────────────────────────────────────
   const allNew = [];
   for (let i = 0; i < companies.length; i++) {
     const co = companies[i];
     process.stdout.write(`[${i + 1}/${companies.length}] ${co.ticker} — `);
     try {
-      const rows = await fetchCompanyFilings(co, existingIds);
-      allNew.push(...rows);
-      console.log(`+${rows.length} 条新记录`);
+      const fresh = await fetchCompany(co, existingIds);
+      allNew.push(...fresh);
+      console.log(`+${fresh.length} 条新记录`);
     } catch (e) {
       console.log(`错误: ${e.message}`);
     }
   }
 
-  // 合并 + 按日期降序排列
-  const merged = [...existing.filings, ...allNew];
+  // ── 合并、重算变动量、排序、保存 ─────────────────────────────────────────
+  const merged = [...db.filings, ...allNew];
+  calculateDeltas(merged);
   merged.sort((a, b) => (b.filedDate || '').localeCompare(a.filedDate || ''));
 
-  // 写入文件
-  const output = {
-    lastUpdated: new Date().toISOString(),
-    totalCount:  merged.length,
-    filings:     merged
-  };
   const dir = path.dirname(DATA_FILE);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(DATA_FILE, JSON.stringify(output, null, 2), 'utf8');
+  fs.writeFileSync(DATA_FILE, JSON.stringify({
+    lastUpdated: new Date().toISOString(),
+    totalCount:  merged.length,
+    filings:     merged,
+  }, null, 2), 'utf8');
 
   console.log(`\n${'─'.repeat(40)}`);
   console.log(`本次新增: ${allNew.length} 条`);
   console.log(`数据库合计: ${merged.length} 条`);
-  console.log(`已保存至: data/filings.json`);
+  console.log(`已保存: data/filings.json`);
 }
 
-main().catch(err => { console.error('\n[Fatal]', err.message); process.exit(1); });
+main().catch(e => { console.error('\n[Fatal]', e.message); process.exit(1); });
