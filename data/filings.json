@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-04-14T06:01:49.040Z",
+  "lastUpdated": "2026-04-14T09:31:01.259Z",
   "totalCount": 3243,
   "filings": [
     {
@@ -97,7 +97,7 @@
       "txPrice": null,
       "sharesOwned": 95670923,
       "pctOwned": null,
-      "sharesDelta": -86269602,
+      "sharesDelta": null,
       "pctDelta": null,
       "edgarUrl": "https://www.sec.gov/Archives/edgar/data/1809587/000119312526148809/0001193125-26-148809-index.htm",
       "accession": "0001193125-26-148809"
@@ -317,7 +317,7 @@
       "txPrice": null,
       "sharesOwned": 93458,
       "pctOwned": null,
-      "sharesDelta": 24008,
+      "sharesDelta": null,
       "pctDelta": null,
       "edgarUrl": "https://www.sec.gov/Archives/edgar/data/1842827/000110465926038505/0001104659-26-038505-index.htm",
       "accession": "0001104659-26-038505"
@@ -337,7 +337,7 @@
       "txPrice": 6.69,
       "sharesOwned": 81560,
       "pctOwned": null,
-      "sharesDelta": 23032,
+      "sharesDelta": null,
       "pctDelta": null,
       "edgarUrl": "https://www.sec.gov/Archives/edgar/data/1842827/000110465926038499/0001104659-26-038499-index.htm",
       "accession": "0001104659-26-038499"
@@ -357,7 +357,7 @@
       "txPrice": 6.69,
       "sharesOwned": 123588,
       "pctOwned": null,
-      "sharesDelta": 53428,
+      "sharesDelta": null,
       "pctDelta": null,
       "edgarUrl": "https://www.sec.gov/Archives/edgar/data/1842827/000110465926038493/0001104659-26-038493-index.htm",
       "accession": "0001104659-26-038493"
@@ -60129,7 +60129,7 @@
       "formType": "SC 13G/A",
       "filedDate": "2009-02-13",
       "eventDate": "2008-12-31",
-      "filerName": "Filing",
+      "filerName": "UBS AG",
       "filerCik": "0001362310",
       "insiderTitle": null,
       "txCode": null,
