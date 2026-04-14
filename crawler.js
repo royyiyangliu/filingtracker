@@ -416,7 +416,11 @@ function calculateDeltas(filings) {
 
   for (const f of sorted) {
     // Form 4 自身已含单笔交易净变动（txShares），不参与跨 filing 的持仓变动计算
-    if (f.formType === '4' || f.formType === '4/A') continue;
+    if (f.formType === '4' || f.formType === '4/A') {
+      f.sharesDelta = null;
+      f.pctDelta    = null;
+      continue;
+    }
 
     // 用规范化后的申报人名作为匹配键（比 CIK 更稳定，跨数据源一致）
     const nameKey = (f.filerName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
