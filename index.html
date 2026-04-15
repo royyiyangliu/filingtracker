@@ -631,6 +631,7 @@ async function initHK() {
       height: 'calc(100vh - 260px)',
       placeholder: '没有符合筛选条件的记录',
       initialSort: [{ column: 'tradingDate', dir: 'desc' }],
+      headerWordWrap: true,
       columns: [
         { title: '交易日期', field: 'tradingDate', width: 105, sorter: 'string',
           formatter: cell => `<span class="num">${fmtDate(cell.getValue())}</span>` },
