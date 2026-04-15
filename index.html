@@ -547,10 +547,17 @@ function marketBadge(method) {
   return `<span class="badge badge-other">${m || '—'}</span>`;
 }
 
-function fmtHKD(n) {
+function getCurrency(row) {
+  if (row.currency) return row.currency;
+  return isHKMarket(row.method) ? 'HKD' : 'USD';
+}
+
+function fmtMoney(n, currency) {
   if (n == null) return '<span class="muted">—</span>';
-  if (n >= 1e8) return `<span class="num">${(n / 1e8).toFixed(3)} 亿</span>`;
-  return `<span class="num">${(n / 1e6).toFixed(2)}M</span>`;
+  const sym = currency || 'HKD';
+  if (n >= 1e8) return `<span class="num">${sym} ${(n / 1e8).toFixed(3)} 亿</span>`;
+  if (n >= 1e6) return `<span class="num">${sym} ${(n / 1e6).toFixed(2)}M</span>`;
+  return `<span class="num">${sym} ${n.toLocaleString()}</span>`;
 }
 
 function applyHkFilters() {
@@ -582,15 +589,18 @@ function updateHkStats() {
   const visible = hkTable.getDataCount('active');
   document.getElementById('hk-count-visible').textContent = visible.toLocaleString();
 
-  // Sum aggregate HKD for visible rows
   const rows = hkTable.getData('active');
-  const total = rows.reduce((s, r) => s + (r.aggregateHKD || 0), 0);
+  let hkdTotal = 0, usdTotal = 0;
+  rows.forEach(r => {
+    if (!r.aggregateHKD) return;
+    if (getCurrency(r) === 'USD') usdTotal += r.aggregateHKD;
+    else hkdTotal += r.aggregateHKD;
+  });
   const el = document.getElementById('hk-agg-display');
-  if (total > 0) {
-    el.innerHTML = `筛选合计：<strong>${(total / 1e8).toFixed(2)} 亿 HKD</strong>`;
-  } else {
-    el.textContent = '';
-  }
+  const parts = [];
+  if (hkdTotal > 0) parts.push(`HKD ${(hkdTotal / 1e8).toFixed(2)} 亿`);
+  if (usdTotal > 0) parts.push(`USD ${(usdTotal / 1e8).toFixed(2)} 亿`);
+  el.innerHTML = parts.length ? `筛选合计：<strong>${parts.join(' + ')}</strong>` : '';
 }
 
 async function initHK() {
@@ -631,15 +641,15 @@ async function initHK() {
           }},
         { title: '回购股数', field: 'shares', width: 130, hozAlign: 'right', headerHozAlign: 'right', sorter: 'number',
           formatter: cell => fmtShares(cell.getValue()) },
-        { title: '最高价 HKD', field: 'priceHigh', width: 105, hozAlign: 'right', headerHozAlign: 'right', sorter: 'number',
-          formatter: cell => fmtPrice(cell.getValue(), 'HKD ') },
-        { title: '最低价 HKD', field: 'priceLow',  width: 105, hozAlign: 'right', headerHozAlign: 'right', sorter: 'number',
-          formatter: cell => fmtPrice(cell.getValue(), 'HKD ') },
-        { title: '总金额', field: 'aggregateHKD', width: 110, hozAlign: 'right', headerHozAlign: 'right', sorter: 'number',
-          formatter: cell => fmtHKD(cell.getValue()) },
+        { title: '最高价', field: 'priceHigh', width: 115, hozAlign: 'right', headerHozAlign: 'right', sorter: 'number',
+          formatter: cell => fmtPrice(cell.getValue(), getCurrency(cell.getRow().getData()) + ' ') },
+        { title: '最低价', field: 'priceLow',  width: 115, hozAlign: 'right', headerHozAlign: 'right', sorter: 'number',
+          formatter: cell => fmtPrice(cell.getValue(), getCurrency(cell.getRow().getData()) + ' ') },
+        { title: '总金额', field: 'aggregateHKD', width: 140, hozAlign: 'right', headerHozAlign: 'right', sorter: 'number',
+          formatter: cell => fmtMoney(cell.getValue(), getCurrency(cell.getRow().getData())) },
         { title: '回购市场', field: 'method', width: 110,
           formatter: cell => marketBadge(cell.getValue()) },
-        { title: '占授权%', field: 'mandatePct', width: 90, hozAlign: 'right', headerHozAlign: 'right', sorter: 'number',
+        { title: '本期回购计划累计回购额 / 总股本 %', field: 'mandatePct', width: 180, hozAlign: 'right', headerHozAlign: 'right', sorter: 'number',
           formatter: cell => fmtPct(cell.getValue(), 3) },
       ]
     });

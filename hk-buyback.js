@@ -83,6 +83,13 @@ async function getBuffer(url, retries = 3) {
 
 // ── XLS parsing ──────────────────────────────────────────────────────────────
 
+function extractCurrency(val) {
+  const s = String(val || '').toUpperCase();
+  if (s.includes('USD')) return 'USD';
+  if (s.includes('HKD')) return 'HKD';
+  return null;
+}
+
 function parseNum(val) {
   if (val == null || val === '') return null;
   const s = String(val).replace(/HKD|USD/g, '').replace(/,/g, '').trim();
@@ -128,6 +135,7 @@ function parseXLS(buffer) {
     if (!tradingDate) continue;
 
     const sharesRaw = parseNum(String(row[4]));
+    const currency  = extractCurrency(String(row[5])) || extractCurrency(String(row[7])) || 'HKD';
     results.push({
       id:           `${tradingDate}-${code}`,
       stockCode:    TARGET[code].code,
@@ -135,6 +143,7 @@ function parseXLS(buffer) {
       companyEN:    TARGET[code].en,
       companyHK:    companyHK,
       tradingDate:  tradingDate,
+      currency:     currency,
       shares:       sharesRaw != null ? Math.round(sharesRaw) : null,
       priceHigh:    parseNum(String(row[5])),
       priceLow:     parseNum(String(row[6])),
