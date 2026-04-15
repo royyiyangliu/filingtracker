@@ -574,7 +574,11 @@ function getWeekStart(dateStr) {
   const d = new Date(dateStr + 'T00:00:00');
   const day = d.getDay();
   d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day)); // shift to Monday
-  return d.toISOString().slice(0, 10);
+  // 手动格式化，避免 toISOString() 在 UTC+8 把日期倒退一天
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${dd}`;
 }
 
 function fmtPeriodDate(val) {
@@ -585,9 +589,9 @@ function fmtPeriodDate(val) {
   }
   if (currentPeriod === 'week') {
     const mon = new Date(val + 'T00:00:00');
-    const fri = new Date(mon); fri.setDate(mon.getDate() + 4);
+    const sun = new Date(mon); sun.setDate(mon.getDate() + 6); // 周一 + 6 = 周日
     const fmt = d => `${d.getMonth()+1}/${d.getDate()}`;
-    return `${fmt(mon)}–${fmt(fri)}`;
+    return `${fmt(mon)}–${fmt(sun)}`;
   }
   return fmtDate(val);
 }
