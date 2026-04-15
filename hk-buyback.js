@@ -38,6 +38,11 @@ const TARGET = {
   9901: { cn: '新东方',   en: 'New Oriental',   code: '9901' },
   772:  { cn: '阅文',    en: 'China Literature', code: '0772' },
   9898: { cn: '微博',    en: 'Weibo',           code: '9898' },
+  9899: { cn: '网易云音乐', en: 'NetEase Cloud Music', code: '9899' },
+  1357: { cn: '美图',    en: 'Meitu',           code: '1357' },
+  780:  { cn: '同程旅行', en: 'Tongcheng Travel', code: '0780' },
+  2513: { cn: '智谱',    en: 'Zhipu AI',        code: '2513' },
+  100:  { cn: 'MiniMax', en: 'MiniMax',         code: '0100' },
 };
 
 // ── Utilities ────────────────────────────────────────────────────────────────

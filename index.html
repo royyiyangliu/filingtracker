@@ -301,6 +301,14 @@
         <option value="us">美股（NYSE / Nasdaq）</option>
       </select>
     </div>
+    <div class="filter-group">
+      <label>统计周期</label>
+      <select id="hk-f-period">
+        <option value="day">按日</option>
+        <option value="week">按周</option>
+        <option value="month">按月</option>
+      </select>
+    </div>
     <button class="btn-reset" onclick="resetHkFilters()">清除筛选</button>
   </div>
 
@@ -560,28 +568,81 @@ function fmtMoney(n, currency) {
   return `<span class="num">${sym} ${n.toLocaleString()}</span>`;
 }
 
+let currentPeriod = 'day';
+
+function getWeekStart(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  const day = d.getDay();
+  d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day)); // shift to Monday
+  return d.toISOString().slice(0, 10);
+}
+
+function fmtPeriodDate(val) {
+  if (!val) return '—';
+  if (currentPeriod === 'month') {
+    const [y, m] = val.split('-');
+    return `${y}年${parseInt(m)}月`;
+  }
+  if (currentPeriod === 'week') {
+    const mon = new Date(val + 'T00:00:00');
+    const fri = new Date(mon); fri.setDate(mon.getDate() + 4);
+    const fmt = d => `${d.getMonth()+1}/${d.getDate()}`;
+    return `${fmt(mon)}–${fmt(fri)}`;
+  }
+  return fmtDate(val);
+}
+
+function aggregateData(data, period) {
+  const groups = {};
+  data.forEach(r => {
+    const cur = getCurrency(r);
+    const pk  = period === 'week' ? getWeekStart(r.tradingDate) : r.tradingDate.slice(0, 7);
+    const key = `${r.stockCode}-${pk}-${cur}`;
+    if (!groups[key]) {
+      groups[key] = {
+        id: key, stockCode: r.stockCode, companyCN: r.companyCN, companyEN: r.companyEN,
+        tradingDate: pk, currency: cur, shares: 0, priceHigh: null, priceLow: null,
+        aggregateHKD: 0, method: r.method, mandatePct: null, _lastDate: '',
+      };
+    }
+    const g = groups[key];
+    g.shares        += (r.shares || 0);
+    g.aggregateHKD  += (r.aggregateHKD || 0);
+    if (r.priceHigh != null) g.priceHigh = g.priceHigh == null ? r.priceHigh : Math.max(g.priceHigh, r.priceHigh);
+    if (r.priceLow  != null) g.priceLow  = g.priceLow  == null ? r.priceLow  : Math.min(g.priceLow,  r.priceLow);
+    if (r.tradingDate > g._lastDate) { g._lastDate = r.tradingDate; g.mandatePct = r.mandatePct; }
+  });
+  return Object.values(groups)
+    .sort((a, b) => b.tradingDate.localeCompare(a.tradingDate) || a.companyCN.localeCompare(b.companyCN));
+}
+
 function applyHkFilters() {
   if (!hkTable) return;
   const company  = document.getElementById('hk-f-company').value;
   const dateFrom = document.getElementById('hk-f-date-from').value;
   const dateTo   = document.getElementById('hk-f-date-to').value;
   const market   = document.getElementById('hk-f-market').value;
+  currentPeriod  = document.getElementById('hk-f-period').value;
 
-  hkTable.setFilter(row => {
-    if (company  && row.companyCN !== company)       return false;
-    if (dateFrom && row.tradingDate < dateFrom)      return false;
-    if (dateTo   && row.tradingDate > dateTo)        return false;
-    if (market === 'hk' && !isHKMarket(row.method)) return false;
-    if (market === 'us' &&  isHKMarket(row.method)) return false;
+  const filtered = hkAllData.filter(r => {
+    if (company  && r.companyCN !== company)       return false;
+    if (dateFrom && r.tradingDate < dateFrom)      return false;
+    if (dateTo   && r.tradingDate > dateTo)        return false;
+    if (market === 'hk' && !isHKMarket(r.method)) return false;
+    if (market === 'us' &&  isHKMarket(r.method)) return false;
     return true;
   });
+  hkTable.setData(currentPeriod === 'day' ? filtered : aggregateData(filtered, currentPeriod));
   updateHkStats();
 }
 
 function resetHkFilters() {
-  ['hk-f-company','hk-f-market'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('hk-f-company').value = '';
+  document.getElementById('hk-f-market').value  = '';
+  document.getElementById('hk-f-period').value  = 'day';
   ['hk-f-date-from','hk-f-date-to'].forEach(id => document.getElementById(id).value = '');
-  if (hkTable) { hkTable.clearFilter(); updateHkStats(); }
+  currentPeriod = 'day';
+  if (hkTable) { hkTable.setData(hkAllData); updateHkStats(); }
 }
 
 function updateHkStats() {
@@ -633,8 +694,8 @@ async function initHK() {
       initialSort: [{ column: 'tradingDate', dir: 'desc' }],
       headerWordWrap: true,
       columns: [
-        { title: '交易日期', field: 'tradingDate', width: 105, sorter: 'string',
-          formatter: cell => `<span class="num">${fmtDate(cell.getValue())}</span>` },
+        { title: '交易日期', field: 'tradingDate', width: 115, sorter: 'string',
+          formatter: cell => `<span class="num">${fmtPeriodDate(cell.getValue())}</span>` },
         { title: '公司', field: 'companyCN', minWidth: 130,
           formatter: cell => {
             const row = cell.getRow().getData();
@@ -655,7 +716,7 @@ async function initHK() {
       ]
     });
 
-    ['hk-f-company','hk-f-date-from','hk-f-date-to','hk-f-market'].forEach(id =>
+    ['hk-f-company','hk-f-date-from','hk-f-date-to','hk-f-market','hk-f-period'].forEach(id =>
       document.getElementById(id).addEventListener('change', applyHkFilters));
     hkTable.on('dataFiltered', updateHkStats);
     updateHkStats();
