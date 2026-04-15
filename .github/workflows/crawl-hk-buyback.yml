@@ -1,0 +1,55 @@
+name: 港股回购数据爬取
+
+on:
+  # 每周二 UTC 06:00（北京时间周二 14:00），与 SEC 爬虫错开
+  schedule:
+    - cron: '0 6 * * 2'
+  # 手动触发，支持历史回填（留空则抓最近 8 天）
+  workflow_dispatch:
+    inputs:
+      date_from:
+        description: '起始交易日 YYYY-MM-DD（留空则抓最近一周）'
+        required: false
+        default: ''
+      date_to:
+        description: '结束交易日 YYYY-MM-DD（留空则抓最近一周）'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: 检出仓库
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: 安装 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 安装依赖
+        run: npm install
+
+      - name: 运行爬虫
+        run: node hk-buyback.js
+        env:
+          DATE_FROM: ${{ github.event.inputs.date_from }}
+          DATE_TO:   ${{ github.event.inputs.date_to }}
+
+      - name: 提交并推送更新数据
+        run: |
+          git config user.name  "HK Buyback Bot"
+          git config user.email "bot@github-actions.com"
+          git add data/hk-buybacks.json
+          git diff --staged --quiet && echo "数据无更新，跳过提交" || (
+            git commit -m "HK buyback update: $(date +%Y-%m-%d)"
+            git push
+          )
