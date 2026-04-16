@@ -112,6 +112,19 @@
       align-self: flex-end;
     }
     .btn-reset:hover { background: #f1f5f9; border-color: #94a3b8; color: #1a1a2e; }
+    .btn-download {
+      height: 34px;
+      padding: 0 14px;
+      border: 1px solid #3b82f6;
+      border-radius: 6px;
+      background: #eff6ff;
+      font-size: 13px;
+      cursor: pointer;
+      color: #1d4ed8;
+      transition: all .15s;
+      align-self: flex-end;
+    }
+    .btn-download:hover { background: #3b82f6; color: #fff; }
 
     /* ── Stats Bar ─────────────────────────────────────── */
     .stats-bar {
@@ -310,6 +323,7 @@
       </select>
     </div>
     <button class="btn-reset" onclick="resetHkFilters()">清除筛选</button>
+    <button class="btn-download" onclick="downloadHK()">↓ 导出 CSV</button>
   </div>
 
   <div class="stats-bar" id="hk-stats-bar">
@@ -666,6 +680,14 @@ function updateHkStats() {
   if (hkdTotal > 0) parts.push(`HKD ${(hkdTotal / 1e8).toFixed(2)} 亿`);
   if (usdTotal > 0) parts.push(`USD ${(usdTotal / 1e8).toFixed(2)} 亿`);
   el.innerHTML = parts.length ? `筛选合计：<strong>${parts.join(' + ')}</strong>` : '';
+}
+
+function downloadHK() {
+  if (!hkTable) return;
+  const period = document.getElementById('hk-f-period').value;
+  const suffix = period === 'week' ? '_weekly' : period === 'month' ? '_monthly' : '_daily';
+  const today  = new Date().toISOString().slice(0, 10);
+  hkTable.download('csv', `hk_buybacks${suffix}_${today}.csv`, { bom: true });
 }
 
 async function initHK() {
