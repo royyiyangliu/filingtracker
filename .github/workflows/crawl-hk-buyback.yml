@@ -55,7 +55,6 @@ jobs:
           )
 
       - name: 发送中概股周报邮件
-        if: github.event_name == 'schedule'
         run: node send-email.js
         env:
           GMAIL_USER:         ${{ secrets.GMAIL_USER }}
