@@ -30,6 +30,38 @@ function fmtNum(n) {
   return Number(n).toLocaleString('en-US');
 }
 
+function fmtMoney(n, currency) {
+  if (n == null) return '—';
+  const sym = currency || 'HKD';
+  if (n >= 1e8) return `${sym} ${(n / 1e8).toFixed(3)} 亿`;
+  if (n >= 1e6) return `${sym} ${(n / 1e6).toFixed(2)}M`;
+  return `${sym} ${Number(n).toLocaleString('en-US')}`;
+}
+
+function fmtTxShares(n) {
+  if (n == null) return '—';
+  if (n === 0)   return '—';
+  return n > 0
+    ? `<span style="color:#16a34a">▲ +${Number(n).toLocaleString('en-US')}</span>`
+    : `<span style="color:#dc2626">▼ ${Number(n).toLocaleString('en-US')}</span>`;
+}
+
+function fmtDelta(n) {
+  if (n == null) return '—';
+  if (n === 0)   return '—';
+  return n > 0
+    ? `<span style="color:#16a34a">▲ +${Number(n).toLocaleString('en-US')}</span>`
+    : `<span style="color:#dc2626">▼ ${Number(n).toLocaleString('en-US')}</span>`;
+}
+
+function fmtDeltaPct(n) {
+  if (n == null) return '—';
+  if (n === 0)   return '—';
+  return n > 0
+    ? `<span style="color:#16a34a">+${n.toFixed(2)}%</span>`
+    : `<span style="color:#dc2626">${n.toFixed(2)}%</span>`;
+}
+
 function buildHtml(hkRows, secRows) {
   const today = new Date().toLocaleDateString('zh-CN', {
     year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'Asia/Shanghai',
@@ -52,7 +84,7 @@ function buildHtml(hkRows, secRows) {
             ${td(fmtNum(r.shares), true)}
             ${td(`${r.currency || 'HKD'} ${r.priceHigh ?? '—'}`, true)}
             ${td(`${r.currency || 'HKD'} ${r.priceLow  ?? '—'}`, true)}
-            ${td(fmtNum(r.aggregateHKD), true)}
+            ${td(fmtMoney(r.aggregateHKD, r.currency), true)}
             ${td(r.method || '—')}
           </tr>`).join('')}
         </tbody>
@@ -62,7 +94,7 @@ function buildHtml(hkRows, secRows) {
     ? '<p style="color:#64748b;margin:8px 0">本周无新申报</p>'
     : `<table style="border-collapse:collapse;font-size:13px;width:100%;margin-top:8px">
         <thead><tr>
-          ${[th('申报日期'), th('公司'), th('表格'), th('申报人'), th('持股数'), th('占比%')].join('')}
+          ${[th('申报日期'), th('公司'), th('表格'), th('申报人'), th('持股数'), th('占比%'), th('交易股数'), th('成交价'), th('股数变动'), th('%变动')].join('')}
         </tr></thead>
         <tbody>
           ${secRows.map((r, i) => `<tr style="${trBg(i)}">
@@ -72,6 +104,10 @@ function buildHtml(hkRows, secRows) {
             ${td(r.filerName || '—')}
             ${td(fmtNum(r.sharesOwned), true)}
             ${td(r.pctOwned != null ? r.pctOwned.toFixed(2) + '%' : '—', true)}
+            ${td(fmtTxShares(r.txShares), true)}
+            ${td(r.txPrice != null ? `$${r.txPrice}` : '—', true)}
+            ${td(fmtDelta(r.sharesDelta), true)}
+            ${td(fmtDeltaPct(r.pctDelta), true)}
           </tr>`).join('')}
         </tbody>
       </table>`;
