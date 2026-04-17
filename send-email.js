@@ -30,6 +30,28 @@ function fmtNum(n) {
   return Number(n).toLocaleString('en-US');
 }
 
+function aggregateHKByCompany(rows) {
+  const groups = {};
+  rows.forEach(r => {
+    const key = r.stockCode;
+    if (!groups[key]) {
+      groups[key] = {
+        stockCode: r.stockCode, companyCN: r.companyCN,
+        currency: r.currency || 'HKD', method: r.method,
+        shares: 0, aggregateHKD: 0, priceHigh: null, priceLow: null,
+        mandatePct: null, _lastDate: '',
+      };
+    }
+    const g = groups[key];
+    g.shares       += (r.shares || 0);
+    g.aggregateHKD += (r.aggregateHKD || 0);
+    if (r.priceHigh != null) g.priceHigh = g.priceHigh == null ? r.priceHigh : Math.max(g.priceHigh, r.priceHigh);
+    if (r.priceLow  != null) g.priceLow  = g.priceLow  == null ? r.priceLow  : Math.min(g.priceLow,  r.priceLow);
+    if (r.tradingDate > g._lastDate) { g._lastDate = r.tradingDate; g.mandatePct = r.mandatePct; }
+  });
+  return Object.values(groups).sort((a, b) => b.aggregateHKD - a.aggregateHKD);
+}
+
 function fmtMoney(n, currency) {
   if (n == null) return '—';
   const sym = currency || 'HKD';
@@ -71,20 +93,21 @@ function buildHtml(hkRows, secRows) {
   const td = (s, right) => `<td style="padding:6px 10px;border:1px solid #e2e8f0;${right ? 'text-align:right' : ''}">${s ?? '—'}</td>`;
   const trBg = i => `background:${i % 2 === 0 ? '#fff' : '#f8faff'}`;
 
-  const hkSection = hkRows.length === 0
+  const hkAgg = aggregateHKByCompany(hkRows);
+  const hkSection = hkAgg.length === 0
     ? '<p style="color:#64748b;margin:8px 0">本周无回购记录</p>'
     : `<table style="border-collapse:collapse;font-size:13px;width:100%;margin-top:8px">
         <thead><tr>
-          ${[th('交易日'), th('公司'), th('回购股数'), th('最高价'), th('最低价'), th('总金额'), th('回购市场')].join('')}
+          ${[th('公司'), th('回购股数'), th('最高价'), th('最低价'), th('总金额'), th('授权比例%'), th('回购市场')].join('')}
         </tr></thead>
         <tbody>
-          ${hkRows.map((r, i) => `<tr style="${trBg(i)}">
-            ${td(r.tradingDate)}
+          ${hkAgg.map((r, i) => `<tr style="${trBg(i)}">
             ${td(`<b>${r.companyCN}</b>`)}
             ${td(fmtNum(r.shares), true)}
-            ${td(`${r.currency || 'HKD'} ${r.priceHigh ?? '—'}`, true)}
-            ${td(`${r.currency || 'HKD'} ${r.priceLow  ?? '—'}`, true)}
+            ${td(r.priceHigh != null ? `${r.currency} ${r.priceHigh}` : '—', true)}
+            ${td(r.priceLow  != null ? `${r.currency} ${r.priceLow}`  : '—', true)}
             ${td(fmtMoney(r.aggregateHKD, r.currency), true)}
+            ${td(r.mandatePct != null ? r.mandatePct.toFixed(3) + '%' : '—', true)}
             ${td(r.method || '—')}
           </tr>`).join('')}
         </tbody>
@@ -120,7 +143,7 @@ function buildHtml(hkRows, secRows) {
   <div style="padding:24px 28px;background:#fff;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 8px 8px">
 
     <h3 style="color:#1d4ed8;margin:0 0 8px;font-size:15px">
-      港股回购 <span style="font-weight:400;color:#64748b">近 8 日 · ${hkRows.length} 条</span>
+      港股回购（周度汇总）<span style="font-weight:400;color:#64748b">近 8 日 · ${aggregateHKByCompany(hkRows).length} 家公司</span>
     </h3>
     ${hkSection}
 
