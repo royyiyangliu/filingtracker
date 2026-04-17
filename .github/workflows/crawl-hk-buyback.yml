@@ -53,3 +53,11 @@ jobs:
             git commit -m "HK buyback update: $(date +%Y-%m-%d)"
             git push
           )
+
+      - name: 发送中概股周报邮件
+        if: github.event_name == 'schedule'
+        run: node send-email.js
+        env:
+          GMAIL_USER:         ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          EMAIL_TO:           ${{ secrets.EMAIL_TO }}

@@ -1,0 +1,138 @@
+'use strict';
+
+/**
+ * 中概股周报邮件发送脚本
+ * 由 crawl-hk-buyback.yml (schedule) 触发，手动 workflow_dispatch 时跳过
+ * 读取港股回购 + SEC 持仓近 8 日数据，发送 HTML 邮件
+ */
+
+const fs         = require('fs');
+const path       = require('path');
+const nodemailer = require('nodemailer');
+
+const HK_FILE  = path.join(__dirname, 'data', 'hk-buybacks.json');
+const SEC_FILE = path.join(__dirname, 'data', 'filings.json');
+
+function getRecent(file, dateField, days = 8) {
+  if (!fs.existsSync(file)) return [];
+  const db    = JSON.parse(fs.readFileSync(file, 'utf8'));
+  const items = db.buybacks || db.filings || [];
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - days);
+  const cut = cutoff.toISOString().slice(0, 10);
+  return items
+    .filter(r => (r[dateField] || '') >= cut)
+    .sort((a, b) => (b[dateField] || '').localeCompare(a[dateField] || ''));
+}
+
+function fmtNum(n) {
+  if (n == null) return '—';
+  return Number(n).toLocaleString('en-US');
+}
+
+function buildHtml(hkRows, secRows) {
+  const today = new Date().toLocaleDateString('zh-CN', {
+    year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'Asia/Shanghai',
+  });
+
+  const th = s => `<th style="padding:6px 10px;background:#e8edf8;text-align:left;white-space:nowrap;border:1px solid #d1d9f0">${s}</th>`;
+  const td = (s, right) => `<td style="padding:6px 10px;border:1px solid #e2e8f0;${right ? 'text-align:right' : ''}">${s ?? '—'}</td>`;
+  const trBg = i => `background:${i % 2 === 0 ? '#fff' : '#f8faff'}`;
+
+  const hkSection = hkRows.length === 0
+    ? '<p style="color:#64748b;margin:8px 0">本周无回购记录</p>'
+    : `<table style="border-collapse:collapse;font-size:13px;width:100%;margin-top:8px">
+        <thead><tr>
+          ${[th('交易日'), th('公司'), th('回购股数'), th('最高价'), th('最低价'), th('总金额'), th('回购市场')].join('')}
+        </tr></thead>
+        <tbody>
+          ${hkRows.map((r, i) => `<tr style="${trBg(i)}">
+            ${td(r.tradingDate)}
+            ${td(`<b>${r.companyCN}</b>`)}
+            ${td(fmtNum(r.shares), true)}
+            ${td(`${r.currency || 'HKD'} ${r.priceHigh ?? '—'}`, true)}
+            ${td(`${r.currency || 'HKD'} ${r.priceLow  ?? '—'}`, true)}
+            ${td(fmtNum(r.aggregateHKD), true)}
+            ${td(r.method || '—')}
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+
+  const secSection = secRows.length === 0
+    ? '<p style="color:#64748b;margin:8px 0">本周无新申报</p>'
+    : `<table style="border-collapse:collapse;font-size:13px;width:100%;margin-top:8px">
+        <thead><tr>
+          ${[th('申报日期'), th('公司'), th('表格'), th('申报人'), th('持股数'), th('占比%')].join('')}
+        </tr></thead>
+        <tbody>
+          ${secRows.map((r, i) => `<tr style="${trBg(i)}">
+            ${td(r.filedDate)}
+            ${td(`<b>${r.company || r.ticker}</b>`)}
+            ${td(r.formType)}
+            ${td(r.filerName || '—')}
+            ${td(fmtNum(r.sharesOwned), true)}
+            ${td(r.pctOwned != null ? r.pctOwned.toFixed(2) + '%' : '—', true)}
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+
+  return `
+<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:960px;margin:0 auto;color:#1a1a2e">
+  <div style="background:#1a1a2e;padding:20px 28px;border-radius:8px 8px 0 0">
+    <h2 style="margin:0;color:#fff;font-size:18px;font-weight:600">中概股周报 · ${today}</h2>
+  </div>
+  <div style="padding:24px 28px;background:#fff;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 8px 8px">
+
+    <h3 style="color:#1d4ed8;margin:0 0 8px;font-size:15px">
+      港股回购 <span style="font-weight:400;color:#64748b">近 8 日 · ${hkRows.length} 条</span>
+    </h3>
+    ${hkSection}
+
+    <h3 style="color:#1d4ed8;margin:32px 0 8px;font-size:15px">
+      SEC 持仓披露 <span style="font-weight:400;color:#64748b">近 8 日 · ${secRows.length} 条</span>
+    </h3>
+    ${secSection}
+
+    <p style="margin-top:32px;padding-top:16px;border-top:1px solid #f1f5f9;color:#94a3b8;font-size:12px">
+      完整数据：<a href="https://royyiyangliu.github.io/filingtracker/" style="color:#3b82f6">royyiyangliu.github.io/filingtracker</a>
+    </p>
+  </div>
+</div>`;
+}
+
+async function main() {
+  const hkRows  = getRecent(HK_FILE,  'tradingDate', 8);
+  const secRows = getRecent(SEC_FILE, 'filedDate',   8);
+
+  if (hkRows.length + secRows.length === 0) {
+    console.log('近 8 日无新数据，跳过发邮件');
+    return;
+  }
+
+  const today = new Date().toLocaleDateString('zh-CN', {
+    year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'Asia/Shanghai',
+  });
+  const subject = `中概股周报 ${today}｜港股回购 ${hkRows.length} 条 · SEC ${secRows.length} 条`;
+  const html    = buildHtml(hkRows, secRows);
+
+  const transporter = nodemailer.createTransport({
+    host:   'smtp.gmail.com',
+    port:   465,
+    secure: true,
+    auth: {
+      user: process.env.GMAIL_USER,
+      pass: process.env.GMAIL_APP_PASSWORD,
+    },
+  });
+
+  await transporter.sendMail({
+    from:    `"中概股周报" <${process.env.GMAIL_USER}>`,
+    to:      process.env.EMAIL_TO,
+    subject: subject,
+    html:    html,
+  });
+
+  console.log(`邮件已发送：${subject}`);
+}
+
+main().catch(e => { console.error('[Fatal]', e.message); process.exit(1); });
