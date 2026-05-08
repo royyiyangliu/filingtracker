@@ -7,6 +7,8 @@
 
   <!-- Tabulator v6 -->
   <link rel="stylesheet" href="https://unpkg.com/tabulator-tables@6.3.1/dist/css/tabulator.min.css" />
+  <!-- D3.js (for HK Connect tabs) -->
+  <script src="assets/d3.min.js"></script>
   <script src="https://unpkg.com/tabulator-tables@6.3.1/dist/js/tabulator.min.js"></script>
 
   <style>
@@ -217,6 +219,123 @@
       .header-top, .filters, .stats-bar, .table-wrap { padding-left: 16px; padding-right: 16px; }
       .filter-group input[type="text"] { width: 180px; }
     }
+
+    /* ════════════════════════════════════════════════════
+       HK CONNECT TABS (Tab 3 & 4) — scoped to .hk-panel
+       ════════════════════════════════════════════════════ */
+    .hk-panel { max-width: 1300px; margin: 16px auto; padding: 0 16px; }
+
+    /* 卡片 */
+    .hk-panel .card {
+      background: #fff; border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08);
+      margin-bottom: 16px; padding: 16px 20px;
+    }
+    .hk-panel .card-no-pad { padding: 0; }
+    .hk-panel .card-title { font-size: 14px; font-weight: 600; color: #444; margin-bottom: 12px; }
+
+    /* 控制栏 */
+    .hk-panel .controls { display:flex; gap:16px; flex-wrap:wrap; align-items:center; }
+    .hk-panel .ctrl-group { display:flex; align-items:center; gap:8px; }
+    .hk-panel .ctrl-label { color:#666; white-space:nowrap; font-size:13px; }
+    .hk-panel .btn-group { display:flex; gap:4px; }
+    .hk-panel .hk-btn {
+      border:1px solid #d0d0d0; background:#fff;
+      padding:4px 14px; border-radius:4px;
+      cursor:pointer; font-size:13px; color:#555; transition:all .15s;
+    }
+    .hk-panel .hk-btn:hover { border-color:#1a73e8; color:#1a73e8; }
+    .hk-panel .hk-btn.active { background:#1a73e8; border-color:#1a73e8; color:#fff; }
+
+    /* 图表容器 */
+    .hk-panel .chart-box { width:100%; height:300px; position:relative; }
+    .hk-panel .chart-hint { text-align:center; color:#999; font-size:13px; padding:120px 0; }
+    .d3-tip {
+      display:none; position:absolute; background:rgba(0,0,0,.75);
+      color:#fff; padding:6px 10px; border-radius:4px;
+      font-size:12px; line-height:1.6; pointer-events:none;
+      white-space:nowrap; z-index:10;
+    }
+
+    /* 数字颜色 */
+    .hk-panel .up   { color:#d93025; }
+    .hk-panel .down { color:#1e8e3e; }
+    .hk-panel .flat { color:#888; }
+
+    /* 排行表格 */
+    .hk-panel .table-wrap { overflow-x:auto; padding:0; }
+    .hk-panel table { width:100%; border-collapse:collapse; font-size:13px; }
+    .hk-panel thead th {
+      background:#f8f9fa; padding:10px 14px; text-align:left;
+      font-weight:500; color:#555; border-bottom:2px solid #e8e8e8;
+      white-space:nowrap; position:sticky; top:0; z-index:1;
+    }
+    .hk-panel tbody tr { cursor:pointer; transition:background .1s; }
+    .hk-panel tbody tr:hover { background:#f0f7ff; }
+    .hk-panel tbody tr.selected { background:#e8f0fe; }
+    .hk-panel tbody td { padding:8px 14px; border-bottom:1px solid #f0f0f0; white-space:nowrap; }
+    .hk-panel td.code { font-family:"SF Mono",Consolas,monospace; color:#1a73e8; font-size:12px; }
+    .hk-panel th.sortable { cursor:pointer; user-select:none; }
+    .hk-panel th.sortable:hover { background:#eef2f7 !important; }
+    .hk-panel th.sort-asc::after  { content:" ↑"; color:#1a73e8; }
+    .hk-panel th.sort-desc::after { content:" ↓"; color:#1a73e8; }
+    .hk-panel tbody tr.selected td:first-child { border-left:3px solid var(--row-color,#1a73e8); }
+
+    /* 顶部双栏：折线图 + 行业表 */
+    .hk-top-inner { display:flex; gap:16px; align-items:flex-start; }
+    .hk-chart-col { flex:1 1 0; min-width:0; }
+    .hk-ind-col { flex:0 0 220px; width:220px; }
+    .hk-ind-title { font-size:12px; color:#888; margin-bottom:6px; font-weight:500; }
+    .hk-ind-wrap { max-height:348px; overflow-y:auto; border:1px solid #f0f0f0; border-radius:4px; }
+    .hk-ind-table { width:100%; border-collapse:collapse; font-size:12px; }
+    .hk-ind-table td { padding:4px 8px; border-bottom:1px solid #f8f8f8; white-space:nowrap; }
+    .hk-ind-table tr:last-child td { border-bottom:none; }
+    .hk-ind-table tr:hover td { background:#f5f5f5; cursor:pointer; }
+    .hk-ind-table tr.ind-active td { background:#e8f0fe; }
+    .hk-ind-val { text-align:right; font-variant-numeric:tabular-nums; }
+
+    /* 多股选择 chip */
+    .sel-chips { display:flex; flex-wrap:wrap; gap:6px; min-height:20px; }
+    .sel-chip {
+      display:inline-flex; align-items:center; gap:4px;
+      padding:2px 8px 2px 6px; border-radius:12px;
+      font-size:12px; color:#fff; cursor:pointer; user-select:none;
+    }
+    .sel-chip .rm { opacity:.7; font-size:14px; line-height:1; }
+    .sel-chip:hover .rm { opacity:1; }
+
+    /* 行业下拉多选 */
+    .hk-ind-dropdown { position:relative; }
+    .hk-ind-dd-btn {
+      display:inline-flex; align-items:center; gap:6px;
+      padding:4px 10px; border-radius:4px; border:1px solid #ddd;
+      background:#fff; font-size:13px; cursor:pointer; white-space:nowrap; user-select:none;
+    }
+    .hk-ind-dd-btn.has-filter { border-color:#1a73e8; color:#1a73e8; }
+    .hk-ind-dd-panel {
+      position:absolute; top:calc(100% + 4px); left:0;
+      background:#fff; border:1px solid #ddd; border-radius:6px;
+      box-shadow:0 4px 16px rgba(0,0,0,.12); z-index:200;
+      min-width:170px; max-height:300px;
+      display:flex; flex-direction:column;
+    }
+    .hk-ind-dd-actions {
+      display:flex; justify-content:space-between;
+      padding:6px 12px; border-bottom:1px solid #eee; font-size:12px; flex-shrink:0;
+    }
+    .hk-ind-dd-actions span { color:#1a73e8; cursor:pointer; }
+    .hk-ind-dd-actions span:hover { text-decoration:underline; }
+    .hk-ind-dd-list { overflow-y:auto; flex:1; padding:4px 0; }
+    .hk-ind-dd-item {
+      display:flex; align-items:center; gap:8px;
+      padding:5px 12px; cursor:pointer; font-size:13px;
+    }
+    .hk-ind-dd-item:hover { background:#f5f5f5; }
+    .hk-ind-dd-item input[type=checkbox] { accent-color:#1a73e8; cursor:pointer; }
+
+    /* 搜索框 */
+    .hk-search { padding:4px 10px; border:1px solid #ddd; border-radius:4px; font-size:13px; width:140px; outline:none; }
+    .hk-search:focus { border-color:#1a73e8; }
   </style>
 </head>
 <body>
@@ -226,13 +345,15 @@
   <div class="header-top">
     <div>
       <div class="header-title">中概股追踪</div>
-      <div class="header-sub">SEC持仓披露 · 港股回购</div>
+      <div class="header-sub">SEC持仓披露 · 港股回购 · 港股通追踪</div>
     </div>
     <div class="header-meta" id="meta-sec"></div>
   </div>
   <div class="tabs">
-    <button class="tab-btn active" onclick="switchTab('sec', this)">SEC 持仓披露</button>
-    <button class="tab-btn"        onclick="switchTab('hk',  this)">港股回购</button>
+    <button class="tab-btn active" onclick="switchTab('sec',   this)">SEC 持仓披露</button>
+    <button class="tab-btn"        onclick="switchTab('hk',    this)">港股回购</button>
+    <button class="tab-btn"        onclick="switchTab('flow',  this)">南向资金流向</button>
+    <button class="tab-btn"        onclick="switchTab('stocks',this)">个股持仓</button>
   </div>
 </div>
 
@@ -340,6 +461,149 @@
 </div>
 
 <!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- TAB: 南向资金流向                                                         -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<div id="tab-flow" class="tab-panel">
+<div class="hk-panel">
+
+  <div class="card">
+    <div class="controls">
+      <div class="ctrl-group">
+        <span class="ctrl-label">显示区间：</span>
+        <div class="btn-group" id="hkf-range-btns">
+          <button class="hk-btn" data-days="90">3月</button>
+          <button class="hk-btn" data-days="180">6月</button>
+          <button class="hk-btn active" data-days="365">1年</button>
+          <button class="hk-btn" data-days="0">全部</button>
+        </div>
+      </div>
+      <div class="ctrl-group">
+        <span class="ctrl-label">渠道：</span>
+        <div class="btn-group" id="hkf-channel-btns">
+          <button class="hk-btn active" data-ch="both">沪港通+深港通</button>
+          <button class="hk-btn" data-ch="hu">沪港通</button>
+          <button class="hk-btn" data-ch="shen">深港通</button>
+        </div>
+      </div>
+      <div class="ctrl-group" style="margin-left:auto">
+        <span class="ctrl-label" id="hkf-date-info" style="color:#888;font-size:12px"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">南向每日净买入（亿港元）</div>
+    <div id="hkf-chart-net" class="chart-box" style="position:relative"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">南向买入额 / 卖出额（亿港元）</div>
+    <div id="hkf-chart-buysell" class="chart-box" style="position:relative"></div>
+  </div>
+
+</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- TAB: 个股持仓                                                             -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<div id="tab-stocks" class="tab-panel">
+<div class="hk-panel">
+
+  <!-- 顶部：多股折线图 + 行业汇总表 -->
+  <div class="card">
+    <div class="hk-top-inner">
+      <div class="hk-chart-col">
+        <div class="card-title" id="hks-chart-title" style="margin-bottom:6px">
+          点击下方股票查看南向持仓比例历史（最多同时选8只）
+        </div>
+        <div id="hks-sel-chips" class="sel-chips" style="margin-bottom:8px"></div>
+        <div id="hks-stock-chart" class="chart-box">
+          <div class="chart-hint">← 请在列表中选择股票</div>
+        </div>
+      </div>
+      <div class="hk-ind-col">
+        <div class="hk-ind-title">行业净买入（亿港元，当前周期）</div>
+        <div class="hk-ind-wrap">
+          <table class="hk-ind-table">
+            <tbody id="hks-ind-summary-tbody">
+              <tr><td colspan="2" style="color:#aaa;text-align:center;padding:16px">加载中…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 控制栏 -->
+  <div class="card">
+    <div class="controls" style="flex-wrap:wrap;gap:10px 16px;">
+      <div class="ctrl-group">
+        <span class="ctrl-label">统计周期：</span>
+        <div class="btn-group" id="hks-period-btns">
+          <button class="hk-btn active" data-period="1d">1日</button>
+          <button class="hk-btn" data-period="1w">1周</button>
+          <button class="hk-btn" data-period="1m">1月</button>
+          <button class="hk-btn" data-period="3m">3月</button>
+          <button class="hk-btn" data-period="6m">6月</button>
+          <button class="hk-btn" data-period="1y">1年</button>
+        </div>
+      </div>
+      <div class="ctrl-group">
+        <span class="ctrl-label">行业：</span>
+        <div class="hk-ind-dropdown" id="hks-ind-dropdown">
+          <button class="hk-ind-dd-btn" id="hks-ind-dd-btn" onclick="hksToggleIndDropdown(event)">
+            <span id="hks-ind-dd-label">全部行业</span>
+            <span style="font-size:10px;opacity:.6">▾</span>
+          </button>
+          <div class="hk-ind-dd-panel" id="hks-ind-dd-panel" style="display:none">
+            <div class="hk-ind-dd-actions">
+              <span onclick="hksSelectAllInds()">全选</span>
+              <span onclick="hksClearInds()">清空</span>
+            </div>
+            <div class="hk-ind-dd-list" id="hks-ind-dd-list"></div>
+          </div>
+        </div>
+      </div>
+      <div class="ctrl-group">
+        <span class="ctrl-label">搜索：</span>
+        <input class="hk-search" id="hks-search-input" type="text"
+          placeholder="名称或代码" oninput="hksOnSearch(this.value)">
+      </div>
+      <div class="ctrl-group" style="margin-left:auto">
+        <span id="hks-stock-count" style="color:#888;font-size:13px"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 排行表格 -->
+  <div class="card card-no-pad">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:32px;text-align:right">#</th>
+            <th class="sortable" data-col="code"       style="text-align:left">代码</th>
+            <th class="sortable" data-col="name"       style="text-align:left">名称</th>
+            <th class="sortable" data-col="industry"   style="text-align:left">行业</th>
+            <th class="sortable" data-col="close"      style="text-align:right">收盘价<br><small style="font-weight:400;color:#888">港元</small></th>
+            <th class="sortable" data-col="pct"        style="text-align:right">持股比例<br><small style="font-weight:400;color:#888">%</small></th>
+            <th class="sortable sort-desc" data-col="net_value"  style="text-align:right">净买入<br><small style="font-weight:400;color:#888">亿港元</small></th>
+            <th class="sortable" data-col="pct_chg"   style="text-align:right">比例变化<br><small style="font-weight:400;color:#888">pp</small></th>
+            <th class="sortable" data-col="net_shares" style="text-align:right">净买入<br><small style="font-weight:400;color:#888">万股</small></th>
+          </tr>
+        </thead>
+        <tbody id="hks-ranking-tbody">
+          <tr><td colspan="9" style="text-align:center;padding:40px;color:#888">数据加载中…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
 <script>
 // ════════════════════════════════════════════════════════════════════════════
 // SHARED UTILITIES
@@ -375,22 +639,18 @@ function fmtDeltaPct(n) {
 // TAB SWITCHING
 // ════════════════════════════════════════════════════════════════════════════
 
-let hkLoaded = false;
+let hkLoaded = false, hkFlowLoaded = false, hkStocksLoaded = false;
 
 function switchTab(name, btn) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById('tab-' + name).classList.add('active');
-
-  // Update header meta for SEC tab
   document.getElementById('meta-sec').style.display = name === 'sec' ? '' : 'none';
 
-  // Lazy-load HK data on first visit
-  if (name === 'hk' && !hkLoaded) {
-    hkLoaded = true;
-    initHK();
-  }
+  if (name === 'hk' && !hkLoaded) { hkLoaded = true; initHK(); }
+  if (name === 'flow'   && !hkFlowLoaded)   { hkFlowLoaded = true;   initHkFlow(); }
+  if (name === 'stocks' && !hkStocksLoaded) { hkStocksLoaded = true; initHkStocks(); }
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -759,6 +1019,490 @@ async function initHK() {
     document.getElementById('error-hk').style.display = 'block';
     document.getElementById('error-hk').textContent = '数据加载失败：' + e.message;
   }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// HK CONNECT — SHARED UTILITIES
+// ════════════════════════════════════════════════════════════════════════════
+
+function hkFmt(v, d, suf) {
+  if (v == null || !isFinite(v)) return '-';
+  return v.toFixed(d) + (suf || '');
+}
+function hkFmtSign(v, d) {
+  if (v == null || !isFinite(v)) return '-';
+  return (v > 0 ? '+' : '') + v.toFixed(d);
+}
+function hkColorCls(v) { return v == null ? 'flat' : v > 0 ? 'up' : v < 0 ? 'down' : 'flat'; }
+function hkEsc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// TAB 3: 南向资金流向
+// ════════════════════════════════════════════════════════════════════════════
+
+let hkFlowData = null;
+let hkFlowDays = 365;
+let hkFlowChannel = 'both';
+
+function initHkFlow() {
+  // 区间按钮
+  document.querySelectorAll('#hkf-range-btns .hk-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#hkf-range-btns .hk-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      hkFlowDays = +btn.dataset.days;
+      hkFlowRender();
+    });
+  });
+  // 渠道按钮
+  document.querySelectorAll('#hkf-channel-btns .hk-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#hkf-channel-btns .hk-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      hkFlowChannel = btn.dataset.ch;
+      hkFlowRender();
+    });
+  });
+
+  fetch('data/hkdata/flow.json')
+    .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(data => {
+      hkFlowData = data;
+      const latest = [...(data.hu||[]),...(data.shen||[])].map(d=>d.date).sort().slice(-1)[0]||'';
+      document.getElementById('hkf-date-info').textContent = latest ? '数据截至：' + latest : '';
+      hkFlowRender();
+    })
+    .catch(e => {
+      document.getElementById('hkf-chart-net').innerHTML =
+        `<div style="padding:20px;color:#c00;font-size:13px">加载失败：${e.message}</div>`;
+    });
+
+  window.addEventListener('resize', () => { if (hkFlowData) hkFlowRender(); });
+}
+
+function hkFlowFilterDays(arr) {
+  if (!hkFlowDays) return arr;
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - hkFlowDays);
+  const cutStr = cutoff.toISOString().slice(0, 10);
+  return arr.filter(d => d.date >= cutStr);
+}
+
+function hkFlowMerge() {
+  if (!hkFlowData) return [];
+  const hu   = hkFlowChannel !== 'shen' ? hkFlowFilterDays(hkFlowData.hu   || []) : [];
+  const shen = hkFlowChannel !== 'hu'   ? hkFlowFilterDays(hkFlowData.shen || []) : [];
+  const byDate = {};
+  for (const d of hu)   byDate[d.date] = { net: d.net, buy: d.buy, sell: d.sell };
+  for (const d of shen) {
+    if (byDate[d.date]) { byDate[d.date].net += d.net; byDate[d.date].buy += d.buy; byDate[d.date].sell += d.sell; }
+    else byDate[d.date] = { net: d.net, buy: d.buy, sell: d.sell };
+  }
+  return Object.keys(byDate).sort().map(date => ({ date, ...byDate[date] }));
+}
+
+function hkFlowRender() {
+  const data = hkFlowMerge();
+  if (!data.length) return;
+  hkDrawBar(data);
+  hkDrawLine(data);
+}
+
+function hkDrawBar(data) {
+  const el = document.getElementById('hkf-chart-net');
+  el.innerHTML = '';
+  const W = el.clientWidth || 900, H = 300;
+  const M = { top:20, right:20, bottom:60, left:64 };
+  const iW = W-M.left-M.right, iH = H-M.top-M.bottom;
+
+  const svg = d3.select(el).append('svg').attr('width',W).attr('height',H);
+  const g = svg.append('g').attr('transform',`translate(${M.left},${M.top})`);
+
+  const x = d3.scaleBand().domain(data.map(d=>d.date)).range([0,iW]).padding(0.1);
+  const yExt = Math.max(Math.abs(d3.min(data,d=>d.net)), Math.abs(d3.max(data,d=>d.net))) * 1.1 || 1;
+  const y = d3.scaleLinear().domain([-yExt, yExt]).nice().range([iH,0]);
+
+  g.append('line').attr('x1',0).attr('x2',iW).attr('y1',y(0)).attr('y2',y(0))
+    .attr('stroke','#ccc').attr('stroke-width',1);
+
+  g.selectAll('rect').data(data).join('rect')
+    .attr('x', d=>x(d.date))
+    .attr('y', d=>d.net>=0 ? y(d.net) : y(0))
+    .attr('width', x.bandwidth())
+    .attr('height', d=>Math.abs(y(d.net)-y(0)))
+    .attr('fill', d=>d.net>=0 ? '#d93025' : '#1e8e3e');
+
+  const every = Math.max(1, Math.floor(data.length/12));
+  g.append('g').attr('transform',`translate(0,${iH})`)
+    .call(d3.axisBottom(x).tickValues(data.filter((_,i)=>i%every===0).map(d=>d.date)).tickSize(3))
+    .selectAll('text').attr('transform','rotate(-30)').attr('text-anchor','end')
+    .attr('dx','-0.5em').attr('dy','0.15em').style('font-size','11px');
+  g.append('g').call(d3.axisLeft(y).ticks(6).tickFormat(d=>d+'亿'));
+
+  const tip = d3.select(el).append('div').attr('class','d3-tip');
+  g.selectAll('rect')
+    .on('mousemove',(event,d)=>{
+      const color = d.net>=0?'#d93025':'#1e8e3e';
+      tip.style('display','block').style('left',(event.offsetX+12)+'px').style('top',(event.offsetY-28)+'px')
+        .html(`${d.date}<br/>净买入：<b style="color:${color}">${d.net.toFixed(2)}</b> 亿`);
+    }).on('mouseleave',()=>tip.style('display','none'));
+}
+
+function hkDrawLine(data) {
+  const el = document.getElementById('hkf-chart-buysell');
+  el.innerHTML = '';
+  const W = el.clientWidth || 900, H = 300;
+  const M = { top:30, right:20, bottom:60, left:64 };
+  const iW = W-M.left-M.right, iH = H-M.top-M.bottom;
+
+  const svg = d3.select(el).append('svg').attr('width',W).attr('height',H);
+  const g = svg.append('g').attr('transform',`translate(${M.left},${M.top})`);
+
+  const parseDate = d3.timeParse('%Y-%m-%d');
+  const fmtDate  = d3.timeFormat('%Y-%m-%d');
+  const dates = data.map(d=>parseDate(d.date));
+
+  const x = d3.scaleTime().domain(d3.extent(dates)).range([0,iW]);
+  const y = d3.scaleLinear().domain([0, d3.max(data,d=>Math.max(d.buy,d.sell))*1.05]).nice().range([iH,0]);
+
+  const lineBuy  = d3.line().x((_,i)=>x(dates[i])).y(d=>y(d.buy)).defined(d=>d.buy!=null);
+  const lineSell = d3.line().x((_,i)=>x(dates[i])).y(d=>y(d.sell)).defined(d=>d.sell!=null);
+
+  g.append('path').datum(data).attr('fill','none').attr('stroke','#d93025').attr('stroke-width',1.5).attr('d',lineBuy);
+  g.append('path').datum(data).attr('fill','none').attr('stroke','#1e8e3e').attr('stroke-width',1.5).attr('d',lineSell);
+
+  [['买入额','#d93025'],['卖出额','#1e8e3e']].forEach(([label,color],i)=>{
+    const lx = iW - 130 + i*65;
+    g.append('line').attr('x1',lx).attr('x2',lx+16).attr('y1',-12).attr('y2',-12).attr('stroke',color).attr('stroke-width',2);
+    g.append('text').attr('x',lx+20).attr('y',-8).text(label).style('font-size','12px').attr('fill','#555');
+  });
+
+  g.append('g').attr('transform',`translate(0,${iH})`)
+    .call(d3.axisBottom(x).ticks(Math.min(data.length,12)).tickFormat(d=>fmtDate(d)))
+    .selectAll('text').attr('transform','rotate(-30)').attr('text-anchor','end')
+    .attr('dx','-0.5em').attr('dy','0.15em').style('font-size','11px');
+  g.append('g').call(d3.axisLeft(y).ticks(6).tickFormat(d=>d+'亿'));
+
+  const tipLine = g.append('line').attr('stroke','#999').attr('stroke-width',1).attr('y1',0).attr('y2',iH).style('display','none');
+  const tip = d3.select(el).append('div').attr('class','d3-tip');
+  svg.on('mousemove',function(event){
+    const [mx] = d3.pointer(event, g.node());
+    const x0 = x.invert(mx);
+    const bisect = d3.bisector(d=>parseDate(d.date)).left;
+    const i = bisect(data, x0, 1);
+    if (i<=0||i>=data.length){tip.style('display','none');tipLine.style('display','none');return;}
+    const d = data[i-1];
+    tipLine.style('display',null).attr('x1',mx).attr('x2',mx);
+    tip.style('display','block').style('left',(event.offsetX+12)+'px').style('top',(event.offsetY-40)+'px')
+      .html(`${d.date}<br/>买入额：<b style="color:#d93025">${d.buy.toFixed(2)}</b> 亿<br/>卖出额：<b style="color:#1e8e3e">${d.sell.toFixed(2)}</b> 亿`);
+  }).on('mouseleave',()=>{tip.style('display','none');tipLine.style('display','none');});
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// TAB 4: 个股持仓
+// ════════════════════════════════════════════════════════════════════════════
+
+const HKS_COLORS = ['#1a73e8','#d93025','#1e8e3e','#e37400','#9334e6','#00796b','#c2185b','#546e7a'];
+const HKS_MAX_SEL = 8;
+
+let hksRankData   = null;
+let hksPeriod     = '1d';
+let hksSortCol    = 'net_value';
+let hksSortDir    = -1;
+let hksFilterInds = new Set();
+let hksSearchQ    = '';
+const hksSelected  = new Map();
+const hksColorUsed = new Set();
+const hksCache     = {};
+
+function hksNextColor() {
+  for (let i=0;i<HKS_COLORS.length;i++) if (!hksColorUsed.has(i)) return i;
+  return 0;
+}
+
+function hksIndSummary(rows) {
+  const map = {};
+  for (const r of rows) {
+    const ind = r.industry || '其他';
+    if (!map[ind]) map[ind] = {net_value:0, count:0};
+    map[ind].net_value += r.net_value||0;
+    map[ind].count++;
+  }
+  return Object.entries(map).map(([industry,v])=>({industry,...v})).sort((a,b)=>b.net_value-a.net_value);
+}
+
+function initHkStocks() {
+  // 周期按钮
+  document.querySelectorAll('#hks-period-btns .hk-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#hks-period-btns .hk-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      hksPeriod = btn.dataset.period;
+      hksFilterInds.clear();
+      hksClearInds();
+      hksRenderAll();
+    });
+  });
+
+  // 表头排序
+  document.querySelectorAll('#tab-stocks th.sortable').forEach(th => {
+    th.addEventListener('click', () => {
+      const col = th.dataset.col;
+      hksSortDir = (hksSortCol===col) ? -hksSortDir : -1;
+      hksSortCol = col;
+      document.querySelectorAll('#tab-stocks th.sortable').forEach(t=>t.classList.remove('sort-asc','sort-desc'));
+      th.classList.add(hksSortDir===-1?'sort-desc':'sort-asc');
+      hksRenderTable();
+    });
+  });
+
+  // 点击外部关闭下拉
+  document.addEventListener('click', e => {
+    const dd = document.getElementById('hks-ind-dropdown');
+    if (dd && !dd.contains(e.target))
+      document.getElementById('hks-ind-dd-panel').style.display = 'none';
+  });
+
+  fetch('data/hkdata/ranking.json')
+    .then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+    .then(data=>{
+      hksRankData = data;
+      hksBuildIndDropdown();
+      hksRenderAll();
+    })
+    .catch(e=>{
+      document.getElementById('hks-ranking-tbody').innerHTML =
+        `<tr><td colspan="9" style="text-align:center;padding:40px;color:#c00">数据加载失败：${e.message}</td></tr>`;
+      document.getElementById('hks-ind-summary-tbody').innerHTML = '';
+    });
+
+  window.addEventListener('resize', ()=>{ if (hksSelected.size) hksDrawMulti(); });
+}
+
+function hksRenderAll() {
+  if (!hksRankData) return;
+  hksRenderIndSummary();
+  hksRenderTable();
+}
+
+// 行业汇总小表（右侧）
+function hksRenderIndSummary() {
+  const rows = hksRankData[hksPeriod]||[];
+  const summary = hksIndSummary(rows);
+  const tbody = document.getElementById('hks-ind-summary-tbody');
+  if (!summary.length) { tbody.innerHTML=''; return; }
+  tbody.innerHTML = summary.map(d=>{
+    const v = d.net_value/1e8;
+    const sign=v>=0?'+':''; const color=v>=0?'#d93025':'#1e8e3e';
+    const active=hksFilterInds.has(d.industry)?' class="ind-active"':'';
+    return `<tr${active} onclick="hksToggleIndFromTable('${hkEsc(d.industry)}')">
+      <td style="color:#444">${hkEsc(d.industry)}<span style="color:#bbb;font-size:11px;margin-left:4px">${d.count}</span></td>
+      <td class="hk-ind-val" style="color:${color}">${sign}${v.toFixed(1)}</td>
+    </tr>`;
+  }).join('');
+}
+
+// 行业下拉
+function hksBuildIndDropdown() {
+  const allInds = new Set();
+  for (const key of ['1d','1w','1m','3m','6m','1y'])
+    for (const r of (hksRankData[key]||[])) allInds.add(r.industry||'其他');
+  const inds = [...allInds].sort((a,b)=>a.localeCompare(b,'zh'));
+  document.getElementById('hks-ind-dd-list').innerHTML = inds.map(ind=>
+    `<label class="hk-ind-dd-item">
+       <input type="checkbox" value="${hkEsc(ind)}" onchange="hksOnIndCheck(this)">
+       <span>${hkEsc(ind)}</span>
+     </label>`
+  ).join('');
+}
+
+function hksToggleIndDropdown(e) {
+  e.stopPropagation();
+  const p = document.getElementById('hks-ind-dd-panel');
+  p.style.display = p.style.display==='none' ? 'flex' : 'none';
+}
+function hksOnIndCheck(cb) {
+  if (cb.checked) hksFilterInds.add(cb.value); else hksFilterInds.delete(cb.value);
+  hksUpdateIndLabel();
+  hksRenderIndSummary();
+  hksRenderTable();
+}
+function hksSelectAllInds() {
+  document.querySelectorAll('#hks-ind-dd-list input[type=checkbox]').forEach(cb=>{cb.checked=true;hksFilterInds.add(cb.value);});
+  hksUpdateIndLabel(); hksRenderIndSummary(); hksRenderTable();
+}
+function hksClearInds() {
+  document.querySelectorAll('#hks-ind-dd-list input[type=checkbox]').forEach(cb=>cb.checked=false);
+  hksFilterInds.clear();
+  hksUpdateIndLabel(); hksRenderIndSummary(); hksRenderTable();
+}
+function hksUpdateIndLabel() {
+  const btn = document.getElementById('hks-ind-dd-btn');
+  const lbl = document.getElementById('hks-ind-dd-label');
+  if (hksFilterInds.size===0) { lbl.textContent='全部行业'; btn.classList.remove('has-filter'); }
+  else { lbl.textContent=`已选 ${hksFilterInds.size} 个行业`; btn.classList.add('has-filter'); }
+}
+function hksToggleIndFromTable(ind) {
+  const cb = document.querySelector(`#hks-ind-dd-list input[value="${CSS.escape(ind)}"]`);
+  if (hksFilterInds.has(ind)) { hksFilterInds.delete(ind); if(cb) cb.checked=false; }
+  else { hksFilterInds.add(ind); if(cb) cb.checked=true; }
+  hksUpdateIndLabel(); hksRenderIndSummary(); hksRenderTable();
+}
+function hksOnSearch(val) { hksSearchQ=val.trim().toLowerCase(); hksRenderTable(); }
+
+// 渲染表格
+function hksRenderTable() {
+  if (!hksRankData) return;
+  let rows = [...(hksRankData[hksPeriod]||[])];
+  if (hksFilterInds.size>0) rows=rows.filter(r=>hksFilterInds.has(r.industry||'其他'));
+  if (hksSearchQ) rows=rows.filter(r=>r.code.toLowerCase().includes(hksSearchQ)||r.name.toLowerCase().includes(hksSearchQ));
+
+  rows.sort((a,b)=>{
+    let va=a[hksSortCol], vb=b[hksSortCol];
+    if (typeof va==='string') return hksSortDir*va.localeCompare(vb,'zh');
+    va=va??-Infinity; vb=vb??-Infinity;
+    return hksSortDir*(va-vb);
+  });
+
+  const total=(hksRankData[hksPeriod]||[]).length;
+  const parts=[];
+  if (hksFilterInds.size>0) parts.push(`已选 ${hksFilterInds.size} 个行业`);
+  if (hksSearchQ) parts.push(`"${hksSearchQ}"`);
+  document.getElementById('hks-stock-count').textContent =
+    parts.length ? `${rows.length} / ${total} 只（${parts.join('，')}）` : `共 ${total} 只股票`;
+
+  const tbody=document.getElementById('hks-ranking-tbody');
+  if (!rows.length) {
+    tbody.innerHTML='<tr><td colspan="9" style="text-align:center;padding:40px;color:#888">暂无符合条件的股票</td></tr>';
+    return;
+  }
+  tbody.innerHTML=rows.map((row,i)=>{
+    const netVal   = row.net_value!=null  ? (row.net_value/1e8).toFixed(2) : '-';
+    const netShrs  = row.net_shares!=null ? (row.net_shares/1e4).toFixed(1) : '-';
+    const isSel=hksSelected.has(row.code);
+    const ci=isSel?hksSelected.get(row.code).colorIdx:-1;
+    const color=isSel?HKS_COLORS[ci]:'';
+    const selCls=isSel?' selected':'';
+    const styleAttr=isSel?` style="--row-color:${color}"`:'';
+    return `<tr class="${selCls}"${styleAttr} onclick="hksToggleStock('${row.code}','${hkEsc(row.name)}')">
+      <td style="color:#bbb;text-align:right">${i+1}</td>
+      <td class="code">${row.code}</td>
+      <td>${hkEsc(row.name)}</td>
+      <td style="color:#555">${hkEsc(row.industry||'')}</td>
+      <td style="text-align:right">${hkFmt(row.close,3)}</td>
+      <td style="text-align:right">${hkFmt(row.pct,2,'%')}</td>
+      <td style="text-align:right" class="${hkColorCls(row.net_value)}">${row.net_value>0?'+':''}${netVal}</td>
+      <td style="text-align:right" class="${hkColorCls(row.pct_chg)}">${hkFmtSign(row.pct_chg,4)}</td>
+      <td style="text-align:right" class="${hkColorCls(row.net_shares)}">${row.net_shares>0?'+':''}${netShrs}</td>
+    </tr>`;
+  }).join('');
+}
+
+// 股票选择
+function hksToggleStock(code, name) {
+  if (hksSelected.has(code)) {
+    const {colorIdx}=hksSelected.get(code);
+    hksColorUsed.delete(colorIdx); hksSelected.delete(code);
+    hksRenderTable(); hksRenderChips(); hksDrawMulti(); return;
+  }
+  if (hksSelected.size>=HKS_MAX_SEL) { alert(`最多同时选择 ${HKS_MAX_SEL} 只股票`); return; }
+  const colorIdx=hksNextColor();
+  hksColorUsed.add(colorIdx); hksSelected.set(code,{name,colorIdx});
+  hksRenderTable(); hksRenderChips();
+  if (hksCache[code]!==undefined) { hksDrawMulti(); }
+  else {
+    hksDrawMulti();
+    fetch(`data/hkdata/stocks/${code}.json`)
+      .then(r=>{if(!r.ok)throw new Error('404');return r.json();})
+      .then(data=>{hksCache[code]=data;hksDrawMulti();})
+      .catch(()=>{hksCache[code]=null;hksDrawMulti();});
+  }
+}
+function hksDeselectStock(code) {
+  if (!hksSelected.has(code)) return;
+  const {colorIdx}=hksSelected.get(code);
+  hksColorUsed.delete(colorIdx); hksSelected.delete(code);
+  hksRenderTable(); hksRenderChips(); hksDrawMulti();
+}
+function hksRenderChips() {
+  const el=document.getElementById('hks-sel-chips');
+  if (hksSelected.size===0){el.innerHTML='';return;}
+  el.innerHTML=[...hksSelected.entries()].map(([code,{name,colorIdx}])=>
+    `<span class="sel-chip" style="background:${HKS_COLORS[colorIdx]}" onclick="hksDeselectStock('${code}')">
+       <span>${name}（${code}）</span><span class="rm">✕</span>
+     </span>`
+  ).join('');
+}
+
+// D3 多股折线图
+function hksDrawMulti() {
+  const el=document.getElementById('hks-stock-chart');
+  if (hksSelected.size===0) {
+    el.innerHTML='<div class="chart-hint">← 请在列表中选择股票</div>';
+    document.getElementById('hks-chart-title').textContent='点击下方股票查看南向持仓比例历史（最多同时选8只）';
+    return;
+  }
+  const series=[]; let pending=0;
+  for (const [code,{name,colorIdx}] of hksSelected) {
+    if (hksCache[code]===undefined){pending++;continue;}
+    if (hksCache[code]===null) continue;
+    const parseD=d3.timeParse('%Y-%m-%d');
+    const points=hksCache[code].dates.map((d,i)=>({date:parseD(d),pct:hksCache[code].pct[i]})).filter(p=>p.pct!=null&&p.date!=null);
+    if (points.length) series.push({code,name,colorIdx,points});
+  }
+  const names=[...hksSelected.values()].map(v=>v.name);
+  document.getElementById('hks-chart-title').textContent=names.join(' / ')+'  南向持仓比例历史'+(pending?'（加载中…）':'');
+
+  if (series.length===0) {
+    el.innerHTML=`<div class="chart-hint" style="color:#999">${pending?'数据加载中…':'暂无历史数据'}</div>`;
+    return;
+  }
+  el.innerHTML='';
+  const W=el.clientWidth||620, H=280;
+  const M={top:16,right:16,bottom:56,left:56};
+  const iW=W-M.left-M.right, iH=H-M.top-M.bottom;
+
+  const svg=d3.select(el).append('svg').attr('width',W).attr('height',H);
+  const g=svg.append('g').attr('transform',`translate(${M.left},${M.top})`);
+
+  const allDates=series.flatMap(s=>s.points.map(p=>p.date));
+  const allPcts =series.flatMap(s=>s.points.map(p=>p.pct));
+  const fmtD=d3.timeFormat('%Y-%m-%d');
+  const x=d3.scaleTime().domain(d3.extent(allDates)).range([0,iW]);
+  const yMin=d3.min(allPcts), yMax=d3.max(allPcts);
+  const yPad=(yMax-yMin)*0.08||0.5;
+  const y=d3.scaleLinear().domain([yMin-yPad,yMax+yPad]).nice().range([iH,0]);
+
+  g.append('g').attr('class','grid').call(d3.axisLeft(y).ticks(5).tickSize(-iW).tickFormat(''))
+    .selectAll('line').attr('stroke','#eee');
+  g.select('.grid .domain').remove();
+
+  series.forEach(s=>{
+    const line=d3.line().x(p=>x(p.date)).y(p=>y(p.pct)).curve(d3.curveMonotoneX);
+    g.append('path').datum(s.points).attr('fill','none')
+      .attr('stroke',HKS_COLORS[s.colorIdx]).attr('stroke-width',1.8).attr('d',line);
+  });
+  g.append('g').attr('transform',`translate(0,${iH})`)
+    .call(d3.axisBottom(x).ticks(Math.min(8,Math.floor(iW/70))).tickFormat(d=>fmtD(d)))
+    .selectAll('text').attr('transform','rotate(-30)').attr('text-anchor','end')
+    .attr('dx','-0.5em').attr('dy','0.15em').style('font-size','11px');
+  g.append('g').call(d3.axisLeft(y).ticks(5).tickFormat(d=>d+'%'));
+
+  const tipLine=g.append('line').attr('stroke','#ccc').attr('stroke-width',1).attr('y1',0).attr('y2',iH).style('display','none');
+  const tip=d3.select(el).append('div').attr('class','d3-tip');
+  svg.on('mousemove',function(event){
+    const [mx]=d3.pointer(event,g.node()); const x0=x.invert(mx);
+    tipLine.style('display',null).attr('x1',mx).attr('x2',mx);
+    let html=`<span style="color:#ccc">${fmtD(x0)}</span>`;
+    series.forEach(s=>{
+      const bis=d3.bisector(p=>p.date).left; const i=bis(s.points,x0,1);
+      if(i<=0||i>=s.points.length)return;
+      const d=x0-s.points[i-1].date>s.points[i].date-x0?s.points[i]:s.points[i-1];
+      html+=`<br/><span style="color:${HKS_COLORS[s.colorIdx]}">■</span> ${s.name}：<b>${d.pct.toFixed(4)}%</b>`;
+    });
+    tip.style('display','block').style('left',(event.offsetX+14)+'px').style('top',(event.offsetY-10)+'px').html(html);
+  }).on('mouseleave',()=>{tip.style('display','none');tipLine.style('display','none');});
 }
 
 // ── Boot ─────────────────────────────────────────────────────────────────────

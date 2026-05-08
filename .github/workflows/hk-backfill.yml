@@ -1,0 +1,61 @@
+name: 港股通历史数据回填
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "回填模式: all / flow / holdings"
+        required: false
+        default: "all"
+
+permissions:
+  contents: write
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: 回填资金流向
+        if: ${{ github.event.inputs.mode == 'all' || github.event.inputs.mode == 'flow' }}
+        run: python scripts/backfill.py flow
+
+      - name: 回填个股持股（按月，可能耗时较长）
+        if: ${{ github.event.inputs.mode == 'all' || github.event.inputs.mode == 'holdings' }}
+        run: python scripts/backfill.py holdings
+
+      - name: 抓取行业分类（增量，仅更新缺失股票）
+        run: python scripts/fetch_industry.py
+
+      - name: 构建网站数据
+        run: python scripts/build_site.py
+
+      - name: 下载 D3.js（首次或缺失时）
+        run: |
+          if [ ! -f assets/d3.min.js ]; then
+            curl -sL "https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js" -o assets/d3.min.js
+            echo "D3.js downloaded"
+          else
+            echo "D3.js already exists, skipping"
+          fi
+
+      - name: 提交数据
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/hkdata/ assets/d3.min.js
+          git diff --cached --quiet || git commit -m "data: hk backfill $(date -u +%Y-%m-%d) [skip ci]"
+          git push
