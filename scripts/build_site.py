@@ -70,17 +70,30 @@ def _dump(obj, path: Path):
 
 # ── 加载原始数据 ─────────────────────────────────────────────
 
-def load_industry() -> dict[str, str]:
-    """读取 data/industry.csv，返回 {code: industry}"""
+def load_industry() -> dict[str, dict]:
+    """读取 data/hkdata/industry.csv，返回 {code: {gics_l1, gics_l2, gics_l3, gics_l4}}"""
     path = ROOT / "data" / "hkdata" / "industry.csv"
     if not path.exists():
         log.warning("industry.csv 不存在，行业字段将为空（请先运行 fetch_industry.py）")
         return {}
-    df = pd.read_csv(path, dtype={"code": str})
-    df["industry"] = df["industry"].fillna("").astype(str)
-    mapping = dict(zip(df["code"], df["industry"]))
-    filled = sum(1 for v in mapping.values() if v)
-    log.info(f"行业映射：{len(mapping)} 条，有效 {filled} 条")
+    df = pd.read_csv(path, dtype=str).fillna("")
+    if "gics_l1" not in df.columns:
+        log.warning("industry.csv 为旧格式（HKEX行业），行业字段将为空，请重新运行 fetch_industry.py")
+        return {}
+    for col in ["gics_l1", "gics_l2", "gics_l3", "gics_l4"]:
+        if col not in df.columns:
+            df[col] = ""
+    mapping = {
+        row["code"]: {
+            "gics_l1": row["gics_l1"],
+            "gics_l2": row["gics_l2"],
+            "gics_l3": row["gics_l3"],
+            "gics_l4": row["gics_l4"],
+        }
+        for _, row in df.iterrows()
+    }
+    filled = sum(1 for v in mapping.values() if v["gics_l1"])
+    log.info(f"GICS行业映射：{len(mapping)} 条，有效 {filled} 条")
     return mapping
 
 
@@ -131,7 +144,7 @@ def build_flow_json(flow: dict):
 
 # ── 构建 ranking.json ────────────────────────────────────────
 
-def build_ranking_json(df: pd.DataFrame, industry_map: dict[str, str] | None = None):
+def build_ranking_json(df: pd.DataFrame, industry_map: dict[str, dict] | None = None):
     if df.empty:
         log.warning("holdings 数据为空，跳过 ranking.json")
         return
@@ -196,7 +209,8 @@ def build_ranking_json(df: pd.DataFrame, industry_map: dict[str, str] | None = N
             {
                 "code": code,
                 "name": str(row["name"]),
-                "industry":   industry_map.get(str(code), ""),
+                "gics_l1":    industry_map.get(str(code), {}).get("gics_l1", ""),
+                "gics_l2":    industry_map.get(str(code), {}).get("gics_l2", ""),
                 "close":      _safe(row["close"],      3),
                 "pct":        _safe(row["pct"],        4),
                 "pct_chg":    _safe(row["pct_chg"],    4),

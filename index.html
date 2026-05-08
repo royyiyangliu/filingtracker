@@ -585,7 +585,7 @@
             <th style="width:32px;text-align:right">#</th>
             <th class="sortable" data-col="code"       style="text-align:left">代码</th>
             <th class="sortable" data-col="name"       style="text-align:left">名称</th>
-            <th class="sortable" data-col="industry"   style="text-align:left">行业</th>
+            <th class="sortable" data-col="gics_l2"    style="text-align:left">行业（GICS）</th>
             <th class="sortable" data-col="close"      style="text-align:right">收盘价<br><small style="font-weight:400;color:#888">港元</small></th>
             <th class="sortable" data-col="pct"        style="text-align:right">持股比例<br><small style="font-weight:400;color:#888">%</small></th>
             <th class="sortable sort-desc" data-col="net_value"  style="text-align:right">净买入<br><small style="font-weight:400;color:#888">亿港元</small></th>
@@ -1224,7 +1224,7 @@ function hksNextColor() {
 function hksIndSummary(rows) {
   const map = {};
   for (const r of rows) {
-    const ind = r.industry || '其他';
+    const ind = r.gics_l1 || '其他';
     if (!map[ind]) map[ind] = {net_value:0, count:0};
     map[ind].net_value += r.net_value||0;
     map[ind].count++;
@@ -1307,7 +1307,7 @@ function hksRenderIndSummary() {
 function hksBuildIndDropdown() {
   const allInds = new Set();
   for (const key of ['1d','1w','1m','3m','6m','1y'])
-    for (const r of (hksRankData[key]||[])) allInds.add(r.industry||'其他');
+    for (const r of (hksRankData[key]||[])) allInds.add(r.gics_l1||'其他');
   const inds = [...allInds].sort((a,b)=>a.localeCompare(b,'zh'));
   document.getElementById('hks-ind-dd-list').innerHTML = inds.map(ind=>
     `<label class="hk-ind-dd-item">
@@ -1355,7 +1355,7 @@ function hksOnSearch(val) { hksSearchQ=val.trim().toLowerCase(); hksRenderTable(
 function hksRenderTable() {
   if (!hksRankData) return;
   let rows = [...(hksRankData[hksPeriod]||[])];
-  if (hksFilterInds.size>0) rows=rows.filter(r=>hksFilterInds.has(r.industry||'其他'));
+  if (hksFilterInds.size>0) rows=rows.filter(r=>hksFilterInds.has(r.gics_l1||'其他'));
   if (hksSearchQ) rows=rows.filter(r=>r.code.toLowerCase().includes(hksSearchQ)||r.name.toLowerCase().includes(hksSearchQ));
 
   rows.sort((a,b)=>{
@@ -1389,7 +1389,7 @@ function hksRenderTable() {
       <td style="color:#bbb;text-align:right">${i+1}</td>
       <td class="code">${row.code}</td>
       <td>${hkEsc(row.name)}</td>
-      <td style="color:#555">${hkEsc(row.industry||'')}</td>
+      <td style="color:#555">${hkEsc(row.gics_l2||'')}</td>
       <td style="text-align:right">${hkFmt(row.close,3)}</td>
       <td style="text-align:right">${hkFmt(row.pct,2,'%')}</td>
       <td style="text-align:right" class="${hkColorCls(row.net_value)}">${row.net_value>0?'+':''}${netVal}</td>
