@@ -1224,7 +1224,7 @@ function hksNextColor() {
 function hksIndSummary(rows) {
   const map = {};
   for (const r of rows) {
-    const ind = r.gics_l1 || '其他';
+    const ind = (r.gics_l1 && r.gics_l2) ? r.gics_l1 + '-' + r.gics_l2 : (r.gics_l1 || r.gics_l2 || '其他');
     if (!map[ind]) map[ind] = {net_value:0, count:0};
     map[ind].net_value += r.net_value||0;
     map[ind].count++;
@@ -1307,7 +1307,7 @@ function hksRenderIndSummary() {
 function hksBuildIndDropdown() {
   const allInds = new Set();
   for (const key of ['1d','1w','1m','3m','6m','1y'])
-    for (const r of (hksRankData[key]||[])) allInds.add(r.gics_l1||'其他');
+    for (const r of (hksRankData[key]||[])) allInds.add((r.gics_l1 && r.gics_l2) ? r.gics_l1+'-'+r.gics_l2 : (r.gics_l1||r.gics_l2||'其他'));
   const inds = [...allInds].sort((a,b)=>a.localeCompare(b,'zh'));
   document.getElementById('hks-ind-dd-list').innerHTML = inds.map(ind=>
     `<label class="hk-ind-dd-item">
@@ -1355,7 +1355,7 @@ function hksOnSearch(val) { hksSearchQ=val.trim().toLowerCase(); hksRenderTable(
 function hksRenderTable() {
   if (!hksRankData) return;
   let rows = [...(hksRankData[hksPeriod]||[])];
-  if (hksFilterInds.size>0) rows=rows.filter(r=>hksFilterInds.has(r.gics_l1||'其他'));
+  if (hksFilterInds.size>0) rows=rows.filter(r=>hksFilterInds.has((r.gics_l1&&r.gics_l2)?r.gics_l1+'-'+r.gics_l2:(r.gics_l1||r.gics_l2||'其他')));
   if (hksSearchQ) rows=rows.filter(r=>r.code.toLowerCase().includes(hksSearchQ)||r.name.toLowerCase().includes(hksSearchQ));
 
   rows.sort((a,b)=>{
