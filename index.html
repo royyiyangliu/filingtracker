@@ -1066,7 +1066,7 @@ function initHkFlow() {
     });
   });
 
-  fetch('data/hkdata/flow.json')
+  fetch('data/hkdata/flow.json', {cache:'no-cache'})
     .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
     .then(data => {
       hkFlowData = data;
@@ -1264,7 +1264,7 @@ function initHkStocks() {
       document.getElementById('hks-ind-dd-panel').style.display = 'none';
   });
 
-  fetch('data/hkdata/ranking.json')
+  fetch('data/hkdata/ranking.json', {cache:'no-cache'})
     .then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
     .then(data=>{
       hksRankData = data;
@@ -1413,7 +1413,7 @@ function hksToggleStock(code, name) {
   if (hksCache[code]!==undefined) { hksDrawMulti(); }
   else {
     hksDrawMulti();
-    fetch(`data/hkdata/stocks/${code}.json`)
+    fetch(`data/hkdata/stocks/${code}.json`, {cache:'no-cache'})
       .then(r=>{if(!r.ok)throw new Error('404');return r.json();})
       .then(data=>{hksCache[code]=data;hksDrawMulti();})
       .catch(()=>{hksCache[code]=null;hksDrawMulti();});
