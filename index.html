@@ -345,12 +345,13 @@
   <div class="header-top">
     <div>
       <div class="header-title">港美股资金追踪</div>
-      <div class="header-sub">SEC机构持仓 · 港股回购 · 港股通南向资金</div>
+      <div class="header-sub">SEC机构持仓 · 港股股东披露 · 港股回购 · 港股通南向资金</div>
     </div>
     <div class="header-meta" id="meta-sec"></div>
   </div>
   <div class="tabs">
     <button class="tab-btn active" onclick="switchTab('sec',   this)">SEC 持仓披露</button>
+    <button class="tab-btn"        onclick="switchTab('di',    this)">港股股东披露</button>
     <button class="tab-btn"        onclick="switchTab('hk',    this)">港股回购</button>
     <button class="tab-btn"        onclick="switchTab('flow',  this)">南向资金流向</button>
     <button class="tab-btn"        onclick="switchTab('stocks',this)">个股持仓</button>
@@ -405,6 +406,66 @@
     <div class="loading-msg" id="loading-sec">正在加载数据…</div>
     <div class="error-msg"   id="error-sec"   style="display:none"></div>
     <div id="filings-table"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- TAB: HK DI (港股股东披露)                                                 -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<div id="tab-di" class="tab-panel">
+
+  <div class="filters">
+    <div class="filter-group">
+      <label>公司</label>
+      <select id="di-f-company">
+        <option value="">全部公司</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>类别</label>
+      <select id="di-f-category">
+        <option value="">全部类别</option>
+        <option value="SS">大股东</option>
+        <option value="DIR">董事/高管</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>交易类型</label>
+      <select id="di-f-txlabel">
+        <option value="">全部类型</option>
+        <option value="市场买卖">市场买卖</option>
+        <option value="场外增持">场外增持</option>
+        <option value="场外减持">场外减持</option>
+        <option value="场外交易">场外交易</option>
+        <option value="股权激励">股权激励</option>
+        <option value="行权">行权</option>
+        <option value="内部变化">内部变化</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>披露日期 起</label>
+      <input type="date" id="di-f-date-from" />
+    </div>
+    <div class="filter-group">
+      <label>披露日期 止</label>
+      <input type="date" id="di-f-date-to" />
+    </div>
+    <div class="filter-group">
+      <label>披露人搜索</label>
+      <input type="text" id="di-f-filer" placeholder="股东 / 董事名称…" />
+    </div>
+    <button class="btn-reset" onclick="resetDiFilters()">清除筛选</button>
+    <button class="btn-download" onclick="downloadDI()">↓ 导出 CSV</button>
+  </div>
+
+  <div class="stats-bar">
+    <span>显示 <strong id="di-count-visible">—</strong> 条，共 <strong id="di-count-total">—</strong> 条</span>
+  </div>
+
+  <div class="table-wrap">
+    <div class="loading-msg" id="loading-di">正在加载数据…</div>
+    <div class="error-msg"   id="error-di"   style="display:none"></div>
+    <div id="di-table"></div>
   </div>
 </div>
 
@@ -639,7 +700,7 @@ function fmtDeltaPct(n) {
 // TAB SWITCHING
 // ════════════════════════════════════════════════════════════════════════════
 
-let hkLoaded = false, hkFlowLoaded = false, hkStocksLoaded = false;
+let hkLoaded = false, hkFlowLoaded = false, hkStocksLoaded = false, diLoaded = false;
 
 function switchTab(name, btn) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -648,9 +709,10 @@ function switchTab(name, btn) {
   document.getElementById('tab-' + name).classList.add('active');
   document.getElementById('meta-sec').style.display = name === 'sec' ? '' : 'none';
 
-  if (name === 'hk' && !hkLoaded) { hkLoaded = true; initHK(); }
-  if (name === 'flow'   && !hkFlowLoaded)   { hkFlowLoaded = true;   initHkFlow(); }
-  if (name === 'stocks' && !hkStocksLoaded) { hkStocksLoaded = true; initHkStocks(); }
+  if (name === 'di'     && !diLoaded)        { diLoaded = true;        initDI(); }
+  if (name === 'hk'     && !hkLoaded)        { hkLoaded = true;        initHK(); }
+  if (name === 'flow'   && !hkFlowLoaded)    { hkFlowLoaded = true;    initHkFlow(); }
+  if (name === 'stocks' && !hkStocksLoaded)  { hkStocksLoaded = true;  initHkStocks(); }
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -811,6 +873,149 @@ async function initSEC() {
     document.getElementById('loading-sec').style.display = 'none';
     document.getElementById('error-sec').style.display = 'block';
     document.getElementById('error-sec').textContent = '数据加载失败：' + e.message;
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// HK DI TAB（港股股东披露）
+// ════════════════════════════════════════════════════════════════════════════
+
+let diTable = null;
+
+function diCategoryBadge(cat) {
+  if (cat === 'SS')  return '<span class="badge badge-13d">大股东</span>';
+  if (cat === 'DIR') return '<span class="badge badge-4">董事/高管</span>';
+  return `<span class="badge badge-other">${cat || '—'}</span>`;
+}
+
+function diTxBadge(label) {
+  if (!label || label === '—') return '<span class="muted">—</span>';
+  let cls = 'badge-other';
+  if (label === '市场买卖' || label === '场外增持' || label === '场外交易') cls = 'badge-13g';
+  if (label === '场外减持') cls = 'badge-13d';
+  if (label.includes('激励') || label === '行权') cls = 'badge-4';
+  return `<span class="badge ${cls}">${label}</span>`;
+}
+
+function fmtDiDelta(n) {
+  if (n == null) return '<span class="muted">—</span>';
+  if (n === 0)   return '<span class="delta-flat">—</span>';
+  const cls = n > 0 ? 'delta-up' : 'delta-down';
+  const sign = n > 0 ? '▲ +' : '▼ ';
+  return `<span class="${cls} num">${sign}${Math.abs(n).toLocaleString('en-US')}</span>`;
+}
+
+function applyDiFilters() {
+  if (!diTable) return;
+  const company  = document.getElementById('di-f-company').value;
+  const category = document.getElementById('di-f-category').value;
+  const txlabel  = document.getElementById('di-f-txlabel').value;
+  const dateFrom = document.getElementById('di-f-date-from').value;
+  const dateTo   = document.getElementById('di-f-date-to').value;
+  const filerQ   = document.getElementById('di-f-filer').value.trim().toLowerCase();
+  diTable.setFilter(row => {
+    if (company  && row.stockCode    !== company)  return false;
+    if (category && row.category     !== category) return false;
+    if (txlabel  && row.txLabel      !== txlabel)  return false;
+    if (dateFrom && row.disclosureDate < dateFrom)  return false;
+    if (dateTo   && row.disclosureDate > dateTo)    return false;
+    if (filerQ   && !(row.filerName || '').toLowerCase().includes(filerQ)) return false;
+    return true;
+  });
+  updateDiCount();
+}
+
+function resetDiFilters() {
+  ['di-f-company','di-f-category','di-f-txlabel','di-f-date-from','di-f-date-to'].forEach(id =>
+    document.getElementById(id).value = '');
+  document.getElementById('di-f-filer').value = '';
+  if (diTable) { diTable.clearFilter(); updateDiCount(); }
+}
+
+function updateDiCount() {
+  document.getElementById('di-count-visible').textContent =
+    (diTable ? diTable.getDataCount('active') : 0).toLocaleString();
+}
+
+function downloadDI() {
+  if (!diTable) return;
+  const today = new Date().toISOString().slice(0, 10);
+  diTable.download('csv', `hk_di_${today}.csv`, { bom: true });
+}
+
+async function initDI() {
+  try {
+    const res = await fetch('./data/hk-di.json?v=' + Date.now());
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const json = await res.json();
+    const allData = json.disclosures || [];
+
+    document.getElementById('di-count-total').textContent = (json.totalCount || allData.length).toLocaleString();
+
+    // 填充公司筛选下拉
+    const codes = [...new Set(allData.map(r => r.stockCode))].sort();
+    const codeNames = {};
+    allData.forEach(r => { if (!codeNames[r.stockCode]) codeNames[r.stockCode] = r.companyCN; });
+    const sel = document.getElementById('di-f-company');
+    codes.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c;
+      opt.textContent = `${c} ${codeNames[c] || ''}`;
+      sel.appendChild(opt);
+    });
+
+    document.getElementById('loading-di').style.display = 'none';
+
+    diTable = new Tabulator('#di-table', {
+      data: allData,
+      layout: 'fitDataFill',
+      height: 'calc(100vh - 260px)',
+      placeholder: '没有符合筛选条件的记录',
+      initialSort: [{ column: 'disclosureDate', dir: 'desc' }],
+      columns: [
+        { title: '披露日期', field: 'disclosureDate', width: 105, sorter: 'string',
+          formatter: cell => `<span class="num">${fmtDate(cell.getValue())}</span>` },
+        { title: '公司', field: 'stockCode', width: 155,
+          formatter: cell => {
+            const row = cell.getRow().getData();
+            return `<span class="ticker-pill">${row.stockCode}</span><span>${row.companyCN}</span>`;
+          }},
+        { title: '类别', field: 'category', width: 100,
+          formatter: cell => diCategoryBadge(cell.getValue()) },
+        { title: '披露人 / 股东', field: 'filerName', minWidth: 180,
+          formatter: cell => { const v = cell.getValue() || '—'; return `<span title="${v}">${v}</span>`; }},
+        { title: '交易类型', field: 'txLabel', width: 110,
+          formatter: cell => diTxBadge(cell.getValue()) },
+        { title: '变动股数', field: 'deltaShares', width: 150, hozAlign: 'right', headerHozAlign: 'right', sorter: 'number',
+          formatter: cell => fmtDiDelta(cell.getValue()) },
+        { title: '成交价', field: 'price', width: 130, hozAlign: 'right', headerHozAlign: 'right',
+          formatter: cell => { const v = cell.getValue(); return v ? `<span class="num">${v}</span>` : '<span class="muted">—</span>'; }},
+        { title: '变动后持股%', field: 'pctHolding', width: 110, hozAlign: 'right', headerHozAlign: 'right', sorter: 'number',
+          formatter: cell => fmtPct(cell.getValue(), 2) },
+        { title: '原文', field: 'noticeUrl', width: 72, hozAlign: 'center', headerSort: false,
+          formatter: cell => {
+            const url = cell.getValue();
+            if (!url) return '—';
+            return `<a class="edgar-link" href="${url}" target="_blank" rel="noopener">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/>
+                        <polyline points="15 3 21 3 21 9"/>
+                        <line x1="10" y1="14" x2="21" y2="3"/>
+                      </svg>HKEX</a>`;
+          }}
+      ]
+    });
+
+    ['di-f-company','di-f-category','di-f-txlabel','di-f-date-from','di-f-date-to'].forEach(id =>
+      document.getElementById(id).addEventListener('change', applyDiFilters));
+    document.getElementById('di-f-filer').addEventListener('input', applyDiFilters);
+    diTable.on('dataFiltered', updateDiCount);
+    updateDiCount();
+
+  } catch (e) {
+    document.getElementById('loading-di').style.display = 'none';
+    document.getElementById('error-di').style.display = 'block';
+    document.getElementById('error-di').textContent = '数据加载失败：' + e.message;
   }
 }
 

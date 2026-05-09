@@ -43,6 +43,7 @@ const TARGET = {
   780:  { cn: '同程旅行', en: 'Tongcheng Travel', code: '0780' },
   2513: { cn: '智谱',    en: 'Zhipu AI',        code: '2513' },
   100:  { cn: 'MiniMax', en: 'MiniMax',         code: '0100' },
+  2400: { cn: '心动公司', en: 'XD Inc.',          code: '2400' },
 };
 
 // ── Utilities ────────────────────────────────────────────────────────────────

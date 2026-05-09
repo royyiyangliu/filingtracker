@@ -1,0 +1,50 @@
+name: 港股股东披露 每周更新
+
+on:
+  schedule:
+    - cron: "30 10 * * 6"   # 每周六 UTC 10:30 = HKT 18:30
+  workflow_dispatch:
+    inputs:
+      date_from:
+        description: "回填起始日期 (YYYY-MM-DD)"
+        required: false
+        default: ""
+      date_to:
+        description: "回填截止日期 (YYYY-MM-DD)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: 抓取港股股东披露数据
+        env:
+          DATE_FROM: ${{ github.event.inputs.date_from }}
+          DATE_TO:   ${{ github.event.inputs.date_to }}
+        run: python scripts/hk_di_crawler.py
+
+      - name: 提交更新
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/hk-di.json
+          git diff --cached --quiet || git commit -m "data: hk-di update $(date -u +%Y-%m-%d) [skip ci]"
+          git push
