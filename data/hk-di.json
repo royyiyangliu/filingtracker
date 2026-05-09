@@ -1,6 +1,6 @@
 {
-  "lastUpdated": "2026-05-09T04:01:09Z",
-  "totalCount": 2757,
+  "lastUpdated": "2026-05-09T11:26:24Z",
+  "totalCount": 2761,
   "disclosures": [
     {
       "id": "CS20260508E00010",
@@ -1193,6 +1193,23 @@
       "deltaShares": -3199694
     },
     {
+      "id": "CS20260418E00001",
+      "stockCode": "9961",
+      "companyCN": "携程",
+      "companyEN": "Trip.com",
+      "filerName": "The Capital Group Companies, Inc.",
+      "category": "SS",
+      "txCode": "1101",
+      "txLabel": "代码1101",
+      "deltaSharesAbs": 897761,
+      "price": "HKD 424.5354",
+      "totalShares": 49106752,
+      "pctHolding": 7.12,
+      "disclosureDate": "2026-04-16",
+      "noticeUrl": "https://di.hkex.com.hk/di/NSForm2.aspx?fn=CS20260418E00001&sa2=an&sid=334264&corpn=%e6%94%9c%e7%a8%8b%e9%9b%86%e5%9c%98%e6%9c%89%e9%99%90%e5%85%ac%e5%8f%b8+-+S&sd=01%2f01%2f2020&ed=31%2f12%2f2030&lang=ZH&g_lang=zh-HK",
+      "deltaShares": 1086378
+    },
+    {
       "id": "DA20260417E00434",
       "stockCode": "9899",
       "companyCN": "网易云音乐",
@@ -2007,6 +2024,23 @@
       "disclosureDate": "2026-04-08",
       "noticeUrl": "https://di.hkex.com.hk/di/NSForm2.aspx?fn=CS20260413E00387&sa2=an&sid=259524&corpn=%e9%98%bf%e9%87%8c%e5%b7%b4%e5%b7%b4%e9%9b%86%e5%9c%98%e6%8e%a7%e8%82%a1%e6%9c%89%e9%99%90%e5%85%ac%e5%8f%b8+-+W&sd=01%2f01%2f2020&ed=31%2f12%2f2030&lang=ZH&g_lang=zh-HK",
       "deltaShares": 9558169
+    },
+    {
+      "id": "CS20260413E00642",
+      "stockCode": "9901",
+      "companyCN": "新东方",
+      "companyEN": "New Oriental",
+      "filerName": "First Beijing Investment Limited",
+      "category": "SS",
+      "txCode": "1201",
+      "txLabel": "市场买卖",
+      "deltaSharesAbs": 670000,
+      "price": "HKD 46.1216",
+      "totalShares": 171006220,
+      "pctHolding": 9.98,
+      "disclosureDate": "2026-04-08",
+      "noticeUrl": "https://di.hkex.com.hk/di/NSForm2.aspx?fn=CS20260413E00642&sa2=an&sid=306567&corpn=%e6%96%b0%e6%9d%b1%e6%96%b9%e6%95%99%e8%82%b2%e7%a7%91%e6%8a%80%e9%9b%86%e5%9c%98+-+S&sd=01%2f01%2f2020&ed=31%2f12%2f2030&lang=ZH&g_lang=zh-HK",
+      "deltaShares": 670000
     },
     {
       "id": "DA20260409E00206",
@@ -5426,6 +5460,23 @@
       "deltaShares": 24649139
     },
     {
+      "id": "CS20260227E00001",
+      "stockCode": "9961",
+      "companyCN": "携程",
+      "companyEN": "Trip.com",
+      "filerName": "The Capital Group Companies, Inc.",
+      "category": "SS",
+      "txCode": "1201",
+      "txLabel": "市场买卖",
+      "deltaSharesAbs": 1789488,
+      "price": "HKD 410.2181",
+      "totalShares": 48020374,
+      "pctHolding": 6.97,
+      "disclosureDate": "2026-02-25",
+      "noticeUrl": "https://di.hkex.com.hk/di/NSForm2.aspx?fn=CS20260227E00001&sa2=an&sid=334264&corpn=%e6%94%9c%e7%a8%8b%e9%9b%86%e5%9c%98%e6%9c%89%e9%99%90%e5%85%ac%e5%8f%b8+-+S&sd=01%2f01%2f2020&ed=31%2f12%2f2030&lang=ZH&g_lang=zh-HK",
+      "deltaShares": -6887661
+    },
+    {
       "id": "DA20260302E00001",
       "stockCode": "9899",
       "companyCN": "网易云音乐",
@@ -5730,6 +5781,23 @@
       "disclosureDate": "2026-02-16",
       "noticeUrl": "https://di.hkex.com.hk/di/NSForm2.aspx?fn=CS20260219E00105&sa2=an&sid=331630&corpn=%e5%97%b6%e5%93%a9%e5%97%b6%e5%93%a9%e8%82%a1%e4%bb%bd%e6%9c%89%e9%99%90%e5%85%ac%e5%8f%b8+-+W&sd=01%2f01%2f2020&ed=31%2f12%2f2030&lang=ZH&g_lang=zh-HK",
       "deltaShares": 0
+    },
+    {
+      "id": "CS20260217E00001",
+      "stockCode": "9961",
+      "companyCN": "携程",
+      "companyEN": "Trip.com",
+      "filerName": "The Capital Group Companies, Inc.",
+      "category": "SS",
+      "txCode": "1201",
+      "txLabel": "市场买卖",
+      "deltaSharesAbs": 1819886,
+      "price": "HKD 419.3279",
+      "totalShares": 54908035,
+      "pctHolding": 7.96,
+      "disclosureDate": "2026-02-13",
+      "noticeUrl": "https://di.hkex.com.hk/di/NSForm2.aspx?fn=CS20260217E00001&sa2=an&sid=334264&corpn=%e6%94%9c%e7%a8%8b%e9%9b%86%e5%9c%98%e6%9c%89%e9%99%90%e5%85%ac%e5%8f%b8+-+S&sd=01%2f01%2f2020&ed=31%2f12%2f2030&lang=ZH&g_lang=zh-HK",
+      "deltaShares": 1819886
     },
     {
       "id": "DA20260216E00014",
