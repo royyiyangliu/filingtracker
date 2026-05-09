@@ -16,35 +16,17 @@ const fs    = require('fs');
 const path  = require('path');
 const XLSX  = require('xlsx');
 
-const DATA_FILE = path.join(__dirname, 'data', 'hk-buybacks.json');
-const UA        = 'HK-Buyback-Tracker/1.0 research-contact@researchuse.com';
-const DELAY_MS  = 300;
+const DATA_FILE    = path.join(__dirname, 'data', 'hk-buybacks.json');
+const CONFIG_FILE  = path.join(__dirname, 'config', 'companies.json');
+const UA           = 'HK-Buyback-Tracker/1.0 research-contact@researchuse.com';
+const DELAY_MS     = 300;
 
-// ── Target stocks ────────────────────────────────────────────────────────────
+// ── Target stocks（从共享配置读取，numCode → metadata） ──────────────────────
 
-const TARGET = {
-  700:  { cn: '腾讯',    en: 'Tencent',        code: '0700' },
-  9988: { cn: '阿里巴巴', en: 'Alibaba',         code: '9988' },
-  9999: { cn: '网易',    en: 'NetEase',         code: '9999' },
-  3690: { cn: '美团',    en: 'Meituan',         code: '3690' },
-  9961: { cn: '携程',    en: 'Trip.com',        code: '9961' },
-  9618: { cn: '京东',    en: 'JD.com',          code: '9618' },
-  9888: { cn: '百度',    en: 'Baidu',           code: '9888' },
-  1024: { cn: '快手',    en: 'Kuaishou',        code: '1024' },
-  1698: { cn: '腾讯音乐', en: 'TME',             code: '1698' },
-  2423: { cn: '贝壳',    en: 'KE Holdings',     code: '2423' },
-  9626: { cn: 'B站',     en: 'Bilibili',        code: '9626' },
-  2076: { cn: 'BOSS直聘', en: 'BOSS Zhipin',    code: '2076' },
-  9901: { cn: '新东方',   en: 'New Oriental',   code: '9901' },
-  772:  { cn: '阅文',    en: 'China Literature', code: '0772' },
-  9898: { cn: '微博',    en: 'Weibo',           code: '9898' },
-  9899: { cn: '网易云音乐', en: 'NetEase Cloud Music', code: '9899' },
-  1357: { cn: '美图',    en: 'Meitu',           code: '1357' },
-  780:  { cn: '同程旅行', en: 'Tongcheng Travel', code: '0780' },
-  2513: { cn: '智谱',    en: 'Zhipu AI',        code: '2513' },
-  100:  { cn: 'MiniMax', en: 'MiniMax',         code: '0100' },
-  2400: { cn: '心动公司', en: 'XD Inc.',          code: '2400' },
-};
+const TARGET = {};
+JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8')).forEach(c => {
+  TARGET[c.numCode] = { cn: c.cn, en: c.en, code: c.code };
+});
 
 // ── Utilities ────────────────────────────────────────────────────────────────
 

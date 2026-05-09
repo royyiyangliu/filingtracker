@@ -14,23 +14,9 @@ import re, time, json, os, sys, urllib.parse, urllib.request, http.cookiejar
 from datetime import date, timedelta
 from pathlib import Path
 
-# ── 公司配置（14家，与港股回购共用） ─────────────────────────────────────────
-COMPANIES = [
-    {'code': '0100', 'sid': '528986', 'corpn': 'MiniMax+Group+Inc.+-+W',                                          'cn': 'MiniMax',   'en': 'MiniMax'},
-    {'code': '0700', 'sid': '6893',   'corpn': '%e9%a8%b0%e8%a8%8a%e6%8e%a7%e8%82%a1%e6%9c%89%e9%99%90%e5%85%ac%e5%8f%b8', 'cn': '腾讯',    'en': 'Tencent'},
-    {'code': '0772', 'sid': '183732', 'corpn': '%e9%96%b1%e6%96%87%e9%9b%86%e5%9c%98',                            'cn': '阅文',    'en': 'China Literature'},
-    {'code': '0780', 'sid': '224699', 'corpn': '%e5%90%8c%e7%a8%8b%e6%97%85%e8%a1%8c%e6%8e%a7%e8%82%a1%e6%9c%89%e9%99%90%e5%85%ac%e5%8f%b8', 'cn': '同程旅行', 'en': 'Tongcheng Travel'},
-    {'code': '1024', 'sid': '322631', 'corpn': '%e5%bf%ab%e6%89%8b%e7%a7%91%e6%8a%80+%e2%80%93+W',               'cn': '快手',    'en': 'Kuaishou'},
-    {'code': '1357', 'sid': '146166', 'corpn': '%e7%be%8e%e5%9c%96%e5%85%ac%e5%8f%b8',                            'cn': '美图',    'en': 'Meitu'},
-    {'code': '2076', 'sid': '421844', 'corpn': '%e7%9c%8b%e6%ba%96%e7%a7%91%e6%8a%80%e6%9c%89%e9%99%90%e5%85%ac%e5%8f%b8+-+W', 'cn': 'BOSS直聘', 'en': 'BOSS Zhipin'},
-    {'code': '2400', 'sid': '261096', 'corpn': '%e5%bf%83%e5%8b%95%e6%9c%89%e9%99%90%e5%85%ac%e5%8f%b8',         'cn': '心动公司', 'en': 'XD Inc.'},
-    {'code': '2423', 'sid': '394775', 'corpn': '%e8%b2%9d%e6%ae%bc%e6%8e%a7%e8%82%a1%e6%9c%89%e9%99%90%e5%85%ac%e5%8f%b8+-+W', 'cn': '贝壳',    'en': 'KE Holdings'},
-    {'code': '2513', 'sid': '528801', 'corpn': '%e5%8c%97%e4%ba%ac%e6%99%ba%e8%ad%9c%e8%8f%af%e7%ab%a0%e7%a7%91%e6%8a%80%e8%82%a1%e4%bb%bd%e6%9c%89%e9%99%90%e5%85%ac%e5%8f%b8++-+H%e8%82%a1', 'cn': '智谱', 'en': 'Zhipu AI'},
-    {'code': '3690', 'sid': '217030', 'corpn': '%e7%be%8e%e5%9c%98+-+W',                                          'cn': '美团',    'en': 'Meituan'},
-    {'code': '9626', 'sid': '331630', 'corpn': '%e5%97%b6%e5%93%a9%e5%97%b6%e5%93%a9%e8%82%a1%e4%bb%bd%e6%9c%89%e9%99%90%e5%85%ac%e5%8f%b8+-+W', 'cn': 'B站', 'en': 'Bilibili'},
-    {'code': '9899', 'sid': '369850', 'corpn': '%e7%b6%b2%e6%98%93%e9%9b%b2%e9%9f%b3%e6%a8%82%e8%82%a1%e4%bb%bd%e6%9c%89%e9%99%90%e5%85%ac%e5%8f%b8', 'cn': '网易云音乐', 'en': 'NetEase Cloud Music'},
-    {'code': '9988', 'sid': '259524', 'corpn': '%e9%98%bf%e9%87%8c%e5%b7%b4%e5%b7%b4%e9%9b%86%e5%9c%98%e6%8e%a7%e8%82%a1%e6%9c%89%e9%99%90%e5%85%ac%e5%8f%b8+-+W', 'cn': '阿里巴巴', 'en': 'Alibaba'},
-]
+# ── 公司配置（从共享 config/companies.json 读取，sid 非空才纳入 DI 抓取） ────
+_CONFIG_FILE = Path(__file__).parent.parent / 'config' / 'companies.json'
+COMPANIES = [c for c in json.loads(_CONFIG_FILE.read_text('utf-8')) if c.get('sid')]
 
 # 交易类型代码 → 可读标签
 TX_LABELS = {
