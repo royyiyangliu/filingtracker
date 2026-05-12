@@ -336,6 +336,130 @@
     /* 搜索框 */
     .hk-search { padding:4px 10px; border:1px solid #ddd; border-radius:4px; font-size:13px; width:140px; outline:none; }
     .hk-search:focus { border-color:#1a73e8; }
+
+    /* ══════════════════════════════════════════════════════════
+       TAB 6 — AI产业链追踪器（所有选择器均限定在 #tab-aichain 内）
+    ══════════════════════════════════════════════════════════ */
+    #tab-aichain { font-family:"PingFang SC","Microsoft YaHei",Arial,sans-serif; font-size:13px; color:#1e293b; }
+    #tab-aichain a { color:#2563eb; text-decoration:none; }
+    /* 顶栏 */
+    #ai-topbar { display:flex; align-items:center; justify-content:space-between; padding:10px 20px; background:#fff; border-bottom:1px solid #e2e8f0; position:sticky; top:46px; z-index:100; box-shadow:0 1px 4px rgba(0,0,0,.06); }
+    #ai-topbar h1 { font-size:16px; font-weight:700; color:#1e293b; letter-spacing:.5px; }
+    #ai-topbar h1 span { color:#2563eb; }
+    #ai-update-info { font-size:11px; color:#64748b; }
+    #ai-refresh-btn { padding:5px 14px; background:#2563eb; border:none; border-radius:5px; color:#fff; cursor:pointer; font-size:12px; transition:background .2s; }
+    #ai-refresh-btn:hover { background:#1d4ed8; }
+    #ai-refresh-btn.loading { background:#94a3b8; cursor:wait; }
+    /* 数据说明 */
+    #tab-aichain .info-wrap { position:relative; display:inline-block; }
+    #tab-aichain .info-btn { padding:5px 10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:5px; color:#64748b; cursor:pointer; font-size:12px; transition:background .2s; }
+    #tab-aichain .info-btn:hover { background:#e2e8f0; color:#1e293b; }
+    #tab-aichain .info-tooltip { display:none; position:absolute; right:0; top:calc(100% + 8px); background:#fff; border:1px solid #e2e8f0; border-radius:8px; box-shadow:0 6px 24px rgba(0,0,0,.13); padding:14px 16px; width:460px; z-index:150; font-size:11px; color:#475569; line-height:1.8; text-align:left; white-space:normal; }
+    #tab-aichain .info-tooltip .it-title { font-size:11.5px; font-weight:700; color:#1e293b; margin-bottom:5px; margin-top:10px; display:block; }
+    #tab-aichain .info-tooltip .it-title:first-child { margin-top:0; }
+    #tab-aichain .info-tooltip b { color:#334155; font-weight:600; }
+    #tab-aichain .info-tooltip .it-warn { color:#92400e; font-weight:700; }
+    #tab-aichain .info-wrap:hover .info-tooltip { display:block; }
+    /* 内容区 */
+    #ai-tab-table { display:flex; flex-direction:column; height:calc(100vh - 92px); overflow:hidden; padding:0; }
+    /* 对比图表面板 */
+    #ai-compare-panel { flex:0 0 310px; border-bottom:2px solid #e2e8f0; background:#fff; display:flex; flex-direction:column; overflow:hidden; }
+    #tab-aichain .cp-toolbar { display:flex; align-items:center; gap:6px; padding:7px 14px; border-bottom:1px solid #e2e8f0; flex-shrink:0; background:#fff; }
+    #tab-aichain .cp-hdr-title { font-size:12px; font-weight:700; color:#1e293b; white-space:nowrap; margin-right:4px; }
+    #tab-aichain .cp-periods { display:flex; gap:2px; flex:1; }
+    #tab-aichain .cp-p-btn { padding:3px 8px; border:1px solid #e2e8f0; border-radius:4px; background:#f8fafc; color:#64748b; cursor:pointer; font-size:11px; white-space:nowrap; }
+    #tab-aichain .cp-p-btn:hover { background:#dbeafe; color:#2563eb; border-color:#93c5fd; }
+    #tab-aichain .cp-p-btn.active { background:#2563eb; color:#fff; border-color:#2563eb; font-weight:600; }
+    #tab-aichain .cp-hdr-btns { display:flex; gap:4px; flex-shrink:0; }
+    #tab-aichain .cp-btn { padding:3px 9px; border:1px solid #e2e8f0; border-radius:4px; background:#f8fafc; color:#64748b; cursor:pointer; font-size:11px; white-space:nowrap; }
+    #tab-aichain .cp-btn:hover { background:#e2e8f0; color:#1e293b; }
+    #tab-aichain .cp-tags { min-height:26px; max-height:50px; overflow-y:auto; padding:3px 14px; display:flex; flex-wrap:wrap; gap:3px; align-content:flex-start; flex-shrink:0; border-bottom:1px solid #f1f5f9; }
+    #tab-aichain .cp-tag { display:inline-flex; align-items:center; gap:3px; padding:2px 7px; border-radius:10px; font-size:10px; color:#fff; }
+    #tab-aichain .cp-tag-lbl { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:140px; }
+    #tab-aichain .cp-tag-x { cursor:pointer; opacity:.75; font-size:11px; flex-shrink:0; line-height:1; }
+    #tab-aichain .cp-tag-x:hover { opacity:1; }
+    #ai-cp-chart-wrap { flex:1; min-height:0; position:relative; overflow:hidden; }
+    #ai-cp-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; gap:8px; color:#94a3b8; font-size:12px; text-align:center; }
+    #ai-cp-empty .cpe-icon { font-size:28px; opacity:.3; }
+    #ai-cp-legend { padding:4px 14px 5px; border-top:1px solid #f1f5f9; display:flex; flex-wrap:wrap; gap:4px 10px; flex-shrink:0; min-height:22px; }
+    #tab-aichain .cpl-item { display:flex; align-items:center; gap:4px; font-size:10px; color:#64748b; cursor:pointer; padding:1px 4px; border-radius:3px; transition:color .15s; }
+    #tab-aichain .cpl-item:hover { color:#dc2626; }
+    #tab-aichain .cpl-dot { width:14px; height:3px; border-radius:1px; flex-shrink:0; }
+    #tab-aichain .cp-axis text { font-size:9px; fill:#94a3b8; }
+    #tab-aichain .cp-axis path, #tab-aichain .cp-axis line { stroke:#e2e8f0; }
+    #tab-aichain .cp-grid line { stroke:#f1f5f9; stroke-dasharray:3,2; }
+    #tab-aichain .cp-grid .domain { display:none; }
+    #tab-aichain .cp-zero { stroke:#cbd5e1; stroke-width:1; stroke-dasharray:4,3; }
+    #tab-aichain .cp-tooltip { position:absolute; background:rgba(15,23,42,.9); color:#f1f5f9; padding:7px 11px; border-radius:6px; font-size:11px; pointer-events:none; z-index:50; white-space:nowrap; line-height:1.75; box-shadow:0 4px 14px rgba(0,0,0,.2); }
+    /* 底部表格区 */
+    #ai-tab2-bottom { flex:1; min-height:0; display:flex; flex-direction:column; overflow:hidden; }
+    #ai-table-toolbar { padding:8px 16px; border-bottom:1px solid #e2e8f0; background:#fff; flex-shrink:0; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+    #ai-search-box { padding:6px 10px; background:#fff; border:1px solid #e2e8f0; border-radius:6px; color:#1e293b; font-size:12px; width:200px; outline:none; }
+    #ai-search-box:focus { border-color:#2563eb; }
+    #tab-aichain .ai-filter-select { padding:6px 10px; background:#fff; border:1px solid #e2e8f0; border-radius:6px; color:#1e293b; font-size:12px; outline:none; cursor:pointer; }
+    #tab-aichain .ai-filter-select:focus { border-color:#2563eb; }
+    #ai-table-stats { font-size:11px; color:#64748b; margin-left:auto; }
+    #ai-stock-table-wrap { flex:1; overflow:auto; }
+    #tab-aichain table { width:100%; border-collapse:collapse; font-size:12px; }
+    #tab-aichain thead th { background:#f8fafc; color:#475569; padding:8px 10px; text-align:right; white-space:nowrap; position:sticky; top:0; z-index:10; cursor:pointer; user-select:none; border-bottom:2px solid #e2e8f0; }
+    #tab-aichain thead th:first-child, #tab-aichain thead th:nth-child(2), #tab-aichain thead th:nth-child(3) { text-align:left; }
+    #tab-aichain thead th:hover { color:#1e293b; background:#eef2f7; }
+    #tab-aichain thead th.sort-asc::after { content:" ↑"; }
+    #tab-aichain thead th.sort-desc::after { content:" ↓"; }
+    #tab-aichain thead th:nth-child(n+6):nth-child(-n+11) { background:#dbeafe !important; }
+    #tab-aichain tbody td:nth-child(n+6):nth-child(-n+11) { background:#eff6ff !important; }
+    #tab-aichain thead th:nth-child(6), #tab-aichain tbody td:nth-child(6) { border-left:2px solid #93c5fd; }
+    #tab-aichain thead th:nth-child(11), #tab-aichain tbody td:nth-child(11) { border-right:2px solid #93c5fd; }
+    #tab-aichain thead th:nth-child(n+12) { background:#fed7aa !important; }
+    #tab-aichain tbody td:nth-child(n+12) { background:#fff7ed !important; }
+    #tab-aichain thead th:nth-child(12), #tab-aichain tbody td:nth-child(12) { border-left:2px solid #fb923c; }
+    #tab-aichain tbody tr.group-total { background:#dbeafe; cursor:default; }
+    #tab-aichain tbody tr.group-total:hover { background:#bfdbfe; }
+    #tab-aichain tbody tr.group-total td { padding:8px 10px; font-weight:700; color:#1e3a8a; font-size:12px; border-bottom:2px solid #93c5fd; border-top:2px solid #93c5fd; }
+    #tab-aichain tbody tr.group-l1 { background:#f0f4ff; cursor:pointer; }
+    #tab-aichain tbody tr.group-l1:hover { background:#e8efff; }
+    #tab-aichain tbody tr.group-l1 td { padding:7px 10px; font-weight:700; color:#2563eb; font-size:12px; border-bottom:1px solid #e2e8f0; }
+    #tab-aichain tbody tr.group-l2 { background:#f8fafc; cursor:pointer; }
+    #tab-aichain tbody tr.group-l2:hover { background:#f1f5f9; }
+    #tab-aichain tbody tr.group-l2 td { padding:6px 10px 6px 24px; color:#475569; border-bottom:1px solid #e2e8f0; font-size:11px; }
+    #tab-aichain tbody tr.stock-row-t { background:#fff; }
+    #tab-aichain tbody tr.stock-row-t:hover { background:#f8fafc; }
+    #tab-aichain tbody tr.stock-row-t td { padding:6px 10px 6px 36px; border-bottom:1px solid #f1f5f9; }
+    #tab-aichain tbody tr.stock-row-t:last-child td { border-bottom:none; }
+    #tab-aichain td { white-space:nowrap; }
+    #tab-aichain td.name-cell { min-width:120px; white-space:normal; }
+    #tab-aichain td.name-cell .cn { color:#1e293b; font-weight:500; }
+    #tab-aichain td.name-cell .tk { color:#94a3b8; font-size:10px; }
+    #tab-aichain td.num { text-align:right; }
+    #tab-aichain td.ret-p { text-align:right; color:#059669; font-weight:600; }
+    #tab-aichain td.ret-n { text-align:right; color:#dc2626; font-weight:600; }
+    #tab-aichain td.ret-z { text-align:right; color:#94a3b8; }
+    #tab-aichain td.mkt-badge { text-align:center; }
+    #tab-aichain .mkt-tag { display:inline-block; padding:1px 5px; border-radius:3px; font-size:10px; font-weight:600; background:#f1f5f9; color:#64748b; border:1px solid #e2e8f0; }
+    #tab-aichain tr.collapsed { display:none; }
+    #tab-aichain .desc-btn { display:inline-block; margin-left:8px; color:#94a3b8; cursor:pointer; font-size:12px; font-weight:400; padding:0 3px; vertical-align:middle; user-select:none; line-height:1; }
+    #tab-aichain .desc-btn:hover { color:#2563eb; }
+    #tab-aichain .desc-btn.active { color:#2563eb; }
+    #tab-aichain tr.desc-row td.desc-cell { padding:10px 20px 10px 28px; background:#f0f6ff; color:#334155; font-size:12px; line-height:1.8; border-bottom:1px solid #dbeafe; border-left:3px solid #3b82f6; font-weight:400; white-space:normal; }
+    /* 加载蒙层 */
+    #ai-loading-overlay { position:absolute; inset:0; background:rgba(248,250,252,.92); display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:200; gap:14px; }
+    #ai-loading-overlay.hidden { display:none; }
+    #tab-aichain .ai-spinner { width:36px; height:36px; border:3px solid #e2e8f0; border-top-color:#2563eb; border-radius:50%; animation:ai-spin .8s linear infinite; }
+    @keyframes ai-spin { to { transform:rotate(360deg); } }
+    #ai-loading-msg { color:#64748b; font-size:13px; }
+    /* 股价走势弹窗（position:fixed，在 tab 之外渲染） */
+    #ai-chart-modal { position:fixed; inset:0; background:rgba(15,23,42,.45); z-index:1000; display:none; align-items:center; justify-content:center; }
+    #ai-chart-modal.open { display:flex; }
+    #ai-chart-box { background:#fff; border-radius:10px; padding:20px; width:680px; max-width:95vw; border:1px solid #e2e8f0; box-shadow:0 20px 60px rgba(0,0,0,.12); }
+    #ai-chart-box h3 { font-size:14px; color:#1e293b; margin-bottom:4px; display:flex; justify-content:space-between; }
+    #ai-chart-box h3 button { background:none; border:none; color:#94a3b8; cursor:pointer; font-size:18px; }
+    #ai-chart-subtitle { font-size:11px; color:#64748b; margin-bottom:14px; }
+    #ai-chart-period-btns { display:flex; gap:6px; margin-bottom:10px; }
+    #tab-aichain .period-btn { padding:3px 10px; border:1px solid #e2e8f0; border-radius:4px; background:transparent; color:#64748b; cursor:pointer; font-size:11px; }
+    #tab-aichain .period-btn.active { background:#2563eb; border-color:#2563eb; color:#fff; }
+    #ai-price-chart { width:100%; height:220px; }
+    /* 行选中高亮 */
+    #tab-aichain tr.cp-row-sel > td:first-child { border-left:3px solid var(--cp-color,#2563eb) !important; }
   </style>
 </head>
 <body>
@@ -355,6 +479,7 @@
     <button class="tab-btn"        onclick="switchTab('hk',    this)">港股回购</button>
     <button class="tab-btn"        onclick="switchTab('flow',  this)">南向资金流向</button>
     <button class="tab-btn"        onclick="switchTab('stocks',this)">个股持仓</button>
+    <button class="tab-btn"        onclick="switchTab('aichain',this)">AI产业链</button>
   </div>
 </div>
 
@@ -665,6 +790,129 @@
 </div>
 
 <!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- TAB 6: AI产业链追踪器                                                      -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<div id="tab-aichain" class="tab-panel" style="position:relative">
+
+  <!-- 加载蒙层 -->
+  <div id="ai-loading-overlay">
+    <div class="ai-spinner"></div>
+    <div id="ai-loading-msg">正在加载产业链数据...</div>
+  </div>
+
+  <!-- 顶栏 -->
+  <div id="ai-topbar">
+    <h1>AI数据中心 <span>产业链追踪器</span></h1>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span id="ai-update-info">数据加载中...</span>
+      <div class="info-wrap">
+        <button class="info-btn">ℹ 数据说明</button>
+        <div class="info-tooltip">
+          <span class="it-title">⚠ 跨层级重复公司</span>
+          以下6家公司因业务横跨多个产业链环节，被同时归属于两个层级，各层级市值统计均含其全部市值——<br>
+          京瓷（6971.T，L1&amp;L2）、三星电子（005930.KS，L2&amp;L3）、普睿司曼（PRY.MI，L4&amp;L6）、ABB（ABBN.SW，L5&amp;L6）、GE维斯塔斯（GEV，L5&amp;L6）、维谛技术（VRT，L5内两个子类）。<br>
+          统计全产业链市值时去除了重复计算；<span class="it-warn">维谛技术在L5层级内存在重复，L5总市值略有偏高。</span>
+          <span class="it-title">📊 分类涨幅算法</span>
+          <b>表格涨幅</b>：期初市值加权，公式为 Σ(期末市值) / Σ(期初市值) − 1，仅统计期间内有完整数据的成分股。<br>
+          <b>图表累计回报</b>：一致篮子法（Consistent Basket）——每日涨幅仅由当天与前一天<b>均有报价</b>的成分股参与市值加权计算。新上市或退市的成分股在变更当日不参与该日涨幅计算，避免成分变更导致指数突变。
+        </div>
+      </div>
+      <button id="ai-refresh-btn" onclick="AIC.refreshData()">↻ 重新加载</button>
+    </div>
+  </div>
+
+  <!-- 主内容：对比图表（顶部）+ 数据表格（底部） -->
+  <div id="ai-tab-table">
+    <!-- 顶部：累计回报对比图表 -->
+    <div id="ai-compare-panel">
+      <div class="cp-toolbar">
+        <span class="cp-hdr-title">📈 累计回报对比</span>
+        <div class="cp-periods">
+          <button class="cp-p-btn" data-p="1W" onclick="AIC.setComparePeriod('1W')">1周</button>
+          <button class="cp-p-btn" data-p="1M" onclick="AIC.setComparePeriod('1M')">1月</button>
+          <button class="cp-p-btn" data-p="3M" onclick="AIC.setComparePeriod('3M')">3月</button>
+          <button class="cp-p-btn" data-p="6M" onclick="AIC.setComparePeriod('6M')">6月</button>
+          <button class="cp-p-btn active" data-p="1Y" onclick="AIC.setComparePeriod('1Y')">1年</button>
+          <button class="cp-p-btn" data-p="2Y" onclick="AIC.setComparePeriod('2Y')">2年</button>
+          <button class="cp-p-btn" data-p="3Y" onclick="AIC.setComparePeriod('3Y')">3年</button>
+          <button class="cp-p-btn" data-p="5Y" onclick="AIC.setComparePeriod('5Y')">5年</button>
+        </div>
+        <div class="cp-hdr-btns">
+          <button class="cp-btn" onclick="AIC.downloadCompareCsv()" title="下载CSV数据">↓ CSV</button>
+          <button class="cp-btn" onclick="AIC.saveComparePng()" title="保存图片">↓ 图片</button>
+          <button class="cp-btn" onclick="AIC.clearAllSeries()" title="清除全部">✕ 清空</button>
+        </div>
+      </div>
+      <div class="cp-tags" id="ai-cp-tags"></div>
+      <div id="ai-cp-chart-wrap">
+        <div id="ai-cp-empty">
+          <div class="cpe-icon">📊</div>
+          <div>点击下方表格中任意行，添加对比标的（最多8条）</div>
+        </div>
+      </div>
+      <div id="ai-cp-legend"></div>
+    </div>
+
+    <!-- 底部：工具栏 + 数据表格 -->
+    <div id="ai-tab2-bottom">
+      <div id="ai-table-toolbar">
+        <input id="ai-search-box" placeholder="搜索公司名称 / 代码..." oninput="AIC.filterTable()">
+        <select class="ai-filter-select" id="ai-filter-l1" onchange="AIC.filterTable()">
+          <option value="">全部层级</option>
+        </select>
+        <select class="ai-filter-select" id="ai-filter-market" onchange="AIC.filterTable()">
+          <option value="">全部市场</option>
+          <option>US</option><option>CN</option><option>HK</option>
+          <option>TW</option><option>JP</option><option>KR</option>
+          <option>EU</option><option>SG</option><option>IN</option>
+        </select>
+        <button class="ai-filter-select" onclick="AIC.collapseAll()" style="cursor:pointer" title="收起全部一级和二级分类">⊟ 收起全部</button>
+        <span id="ai-table-stats"></span>
+      </div>
+      <div id="ai-stock-table-wrap">
+        <table id="ai-stock-table">
+          <thead>
+            <tr>
+              <th data-col="name" style="text-align:left">公司</th>
+              <th data-col="market" style="text-align:left">市场</th>
+              <th data-col="ticker" style="text-align:left">代码</th>
+              <th data-col="market_cap_usd">市值(亿$)</th>
+              <th data-col="last_price">股价</th>
+              <th data-col="1d">1日%</th>
+              <th data-col="1w">1周%</th>
+              <th data-col="1m">1月%</th>
+              <th data-col="6m">6月%</th>
+              <th data-col="1y">1年%</th>
+              <th data-col="3y">3年%</th>
+              <th data-col="pe">PE</th>
+              <th data-col="ps">PS</th>
+              <th data-col="pb">PB</th>
+            </tr>
+          </thead>
+          <tbody id="ai-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- AI产业链股价走势弹窗（position:fixed，渲染在最顶层） -->
+<div id="ai-chart-modal" onclick="AIC.closeChart(event)">
+  <div id="ai-chart-box">
+    <h3><span id="ai-chart-title">股价走势</span><button onclick="AIC.closeChart()">✕</button></h3>
+    <div id="ai-chart-subtitle"></div>
+    <div id="ai-chart-period-btns">
+      <button class="period-btn" onclick="AIC.setChartPeriod('1m')">1月</button>
+      <button class="period-btn" onclick="AIC.setChartPeriod('3m')">3月</button>
+      <button class="period-btn active" onclick="AIC.setChartPeriod('1y')">1年</button>
+      <button class="period-btn" onclick="AIC.setChartPeriod('3y')">3年</button>
+      <button class="period-btn" onclick="AIC.setChartPeriod('all')">全部</button>
+    </div>
+    <svg id="ai-price-chart"></svg>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
 <script>
 // ════════════════════════════════════════════════════════════════════════════
 // SHARED UTILITIES
@@ -700,7 +948,7 @@ function fmtDeltaPct(n) {
 // TAB SWITCHING
 // ════════════════════════════════════════════════════════════════════════════
 
-let hkLoaded = false, hkFlowLoaded = false, hkStocksLoaded = false, diLoaded = false;
+let hkLoaded = false, hkFlowLoaded = false, hkStocksLoaded = false, diLoaded = false, aichainLoaded = false;
 
 function switchTab(name, btn) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -709,10 +957,11 @@ function switchTab(name, btn) {
   document.getElementById('tab-' + name).classList.add('active');
   document.getElementById('meta-sec').style.display = name === 'sec' ? '' : 'none';
 
-  if (name === 'di'     && !diLoaded)        { diLoaded = true;        initDI(); }
-  if (name === 'hk'     && !hkLoaded)        { hkLoaded = true;        initHK(); }
-  if (name === 'flow'   && !hkFlowLoaded)    { hkFlowLoaded = true;    initHkFlow(); }
-  if (name === 'stocks' && !hkStocksLoaded)  { hkStocksLoaded = true;  initHkStocks(); }
+  if (name === 'di'      && !diLoaded)        { diLoaded = true;        initDI(); }
+  if (name === 'hk'      && !hkLoaded)        { hkLoaded = true;        initHK(); }
+  if (name === 'flow'    && !hkFlowLoaded)    { hkFlowLoaded = true;    initHkFlow(); }
+  if (name === 'stocks'  && !hkStocksLoaded)  { hkStocksLoaded = true;  initHkStocks(); }
+  if (name === 'aichain' && !aichainLoaded)   { aichainLoaded = true;   AIC.loadAll(); }
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -1712,6 +1961,523 @@ function hksDrawMulti() {
 
 // ── Boot ─────────────────────────────────────────────────────────────────────
 initSEC();
+
+// ════════════════════════════════════════════════════════════════════════════
+// TAB 6 — AI产业链追踪器（封装在 IIFE 内，通过 window.AIC 对外暴露）
+// ════════════════════════════════════════════════════════════════════════════
+(function() {
+'use strict';
+
+const SUMMARY_URL  = "data/aichain/summary.json";
+const HISTORY_BASE = "data/aichain/history/";
+const CAT_CHART_URL = "data/aichain/chart_categories.json";
+
+const LAYER_DESCS = {
+  L1: "芯片产业链的最上游，为晶圆代工厂提供生产所需的基础材料（特种气体、化学品、硅基底材）及全套半导体制造设备（光刻机、刻蚀机、薄膜沉积设备等）。客户主要是L2晶圆代工厂，采购周期长、技术壁垒极高。商业模式为一次性设备销售或材料长期供货合同。",
+  L1a:"向晶圆厂提供芯片制造所需的消耗性材料，包括超纯特种气体（氢气、氮气、氟化氢等）、光刻胶、CMP浆料、前驱体化学品、陶瓷封装基材等。材料消耗随晶圆厂产能线性增长，客户黏性强、更换成本高。",
+  L1b:"向晶圆厂销售生产芯片的核心设备，涵盖光刻（ASML垄断EUV）、化学气相沉积（CVD）、原子层沉积（ALD）、干法刻蚀、清洗、量测等各工序设备及先进封装设备。设备单价极高、使用寿命10年以上，属一次性大额资本开支。",
+  L2: "承接芯片设计公司（L3）的生产委托，将设计图纸转化为实物芯片，再完成封装测试后交付。全程不参与芯片设计，属纯制造服务业务（Foundry模式）。资本投入极为密集，先进制程晶圆厂建设成本超百亿美元。",
+  L2a:"纯代工厂（台积电、中芯国际等）按客户设计文件生产芯片，收取加工费。先进制程（3nm、5nm）拥有大幅溢价并形成较高进入壁垒。台积电对英伟达等AI芯片客户的代工垄断地位，使其成为AI产业链最核心的卡口之一。",
+  L2b:"晶圆切割后的芯片需经封装、测试才能使用。AI时代的「先进封装」（CoWoS、HBM堆叠、Chiplet异构集成）已成战略焦点——英伟达H100即使用台积电CoWoS封装。传统OSAT（日月光、Amkor、长电科技）负责大量标准封测。",
+  L2c:"IC基板（ABF载板）连接芯片与PCB，是BGA/倒装封装的核心材料。AI芯片集成度越高、对高密度基板需求越大。供应商包括揖斐电、景硕、AT&S、大日本印刷等，长期处于供不应求状态。",
+  L3: "产业链中技术门槛最高、毛利率最高的环节，负责设计AI所需各类核心芯片（GPU、NPU、HBM、网络芯片等）。绝大多数为Fabless模式（无自有工厂，委托L2代工）。AI浪潮直接驱动英伟达市值突破3万亿美元，是整条产业链价值重心所在。",
+  L3a:"EDA软件（新思科技、楷登电子）是芯片设计的「操作系统」，芯片设计公司无法绕过；IP授权商（ARM、CEVA）向设计公司收取处理器核心或功能模块的授权费。两类公司均具备极高的收费持续性和市场垄断性，是整个半导体设计生态的基础设施。",
+  L3b:"AI训练和推理的算力核心。英伟达以H/GB系列GPU+CUDA生态占据压倒性地位；AMD以Instinct系列为第二大玩家；英特尔通过Gaudi系列参与竞争。还包括用于边缘推理和通信基站的FPGA（莱迪思）及为AI系统提供精准供电的电源管理芯片（芯源系统）。这是整条AI产业链价值最集中的单一子类。",
+  L3c:"数据中心内部的高速通信依赖交换芯片（博通Tomahawk/Trident系列）和定制ASIC。云厂商越来越多地绕过英伟达自研AI推理芯片，博通和Marvel是最主要的合作方。科睿科技则专注高速以太网互联芯片。",
+  L3d:"HBM（高带宽存储）通过硅中介层与AI芯片并排封装，带宽远超普通DRAM，是英伟达H100/H200/GB200的标配内存。SK海力士（HBM3/HBM3E领先）、三星、美光三家垄断供应，供需长期偏紧，是AI硬件最重要的结构性瓶颈之一。",
+  L3e:"AI数据中心需要大量标准DRAM（训练时加载模型参数）和NAND闪存（训练数据集、检查点存储）。相比HBM技术门槛较低，竞争更激烈。国内厂商（北京君正、东芯半导体、兆易创新等）在国产化背景下持续获得市场份额。",
+  L3f:"在美国出口管制限制先进NVIDIA芯片进入中国的背景下，国内GPU/AI芯片公司快速崛起并集中上市（2025年底至2026年初）。寒武纪、海光、摩尔线程、沐曦、壁仞、天数均以AI训练/推理加速为核心方向，整体仍处早期投入阶段、尚未全面盈利，但受益于国产算力替代需求，市场关注度极高。",
+  L4: "将L3的芯片组装为完整的AI服务器、网络交换机、光互联系统，再交付给L5数据中心客户。L4是\"硬件集成商\"角色，夹在芯片供应商和云客户之间，毛利相对偏低，但随AI基础设施投资规模扩大，收入体量快速增长。",
+  L4a:"将英伟达GPU封装为完整AI服务器机架系统，出售给云厂商或企业客户。包括戴尔、HPE等品牌服务器厂商，以及研华科技、技嘉、浪潮等专注AI服务器的亚洲厂商。超大规模客户对定制化需求推动了白牌ODM（见L4b）模式的兴起。",
+  L4b:"云巨头（AWS、微软、谷歌、Meta）日益绕过品牌OEM，直接向台湾ODM（广达、仁宝、纬颖、鸿海）按自定规格订制服务器，压低成本。EMS（弗莱克斯、西勒斯蒂卡）则承接更广泛的电子制造外包。商业模式为纯制造服务，毛利率薄但体量庞大。",
+  L4c:"数据中心内万卡GPU集群的通信骨干：Arista Networks（领先以太网交换机）、思科等提供高速交换/路由设备。随AI集群规模从千卡扩展至万卡，400G/800G乃至1.6T的超低延迟网络需求急剧增加，是AI基础设施扩张的直接受益者。",
+  L4d:"将电信号转换为光信号在光纤中传输，是数据中心内部及数据中心间高速互联的核心器件。800G/1.6T收发器需求随AI集群规模扩张爆发性增长。国内厂商（中际旭创、新易盛）凭借性价比优势快速扩大全球份额，与Coherent、Lumentum等美国厂商竞争。",
+  L4e:"机架内及相邻机架间短距离连接使用高速铜缆、DAC（直连铜缆）和有源电缆，成本低于光模块。安费诺、古河电工、嘉泽端子、TE Connectivity等提供连接器和线缆组件。铜缆在几米内的成本优势使其与光模块在短距离市场形成竞争。",
+  L4f:"AI服务器主板、高层数高密度PCB，承载GPU、CPU、内存和各类功能芯片。随GPU功耗和集成度上升，主板层数和材料要求（高频板材）持续提升，议价能力有所增强。主要厂商集中在台湾（华通、台光、健鼎）和日本。",
+  L5: "支撑AI数据中心物理运营的\"地基\"层：供配电系统、冷却散热系统、IDC厂房本身，以及建设工程。AI时代单个GPU集群功耗动辄数十兆瓦，使供电和散热成为最核心的制约因素，也驱动了L5全线公司的景气大幅提升。",
+  L5a:"不间断电源（UPS）、配电单元（PDU）、变压器、开关柜、备用发电机，以及液冷供电模块。核心供应商包括Vertiv（维谛）、ABB、伊顿、施耐德电气、台达电子等。Vertiv因AI数据中心供电需求爆发，近年股价涨幅数倍，成为AI基础设施最受关注的受益标的之一。",
+  L5b:"GPU功耗密度突破每芯片1kW后，传统风冷逼近极限。液冷（直接液冷DLC、浸没式冷却、后门换热器）加速商用。核心供应商包括Vertiv、大金工业、开利、Stulz，以及专注液冷的新兴企业。冷却方案向液冷迁移是AI数据中心最确定的技术趋势之一。",
+  L5c:"建设、持有并运营数据中心物业，向云厂商和企业租户出租机柜、整层或整栋数据中心（批发/零售模式）。Equinix、Digital Realty等以REITs形式上市，具有稳定分红属性；万国数据、铁山面向中国市场。AI需求驱动数据中心租赁价格和空置率大幅改善。",
+  L5d:"电气和机械工程承包商，承接数据中心的规划、建设和安装工程。EMCOR、MYR Group、Mastec等受益于超大规模云厂商年均数百亿美元的资本开支。数据中心建设周期压缩（「超算工厂」模式）进一步提升工程承包商的议价能力。",
+  L6: "为数据中心提供电力来源和输电基础设施，重点在发电侧和输电侧（区别于L5的厂内配电）。AI导致的电力需求激增已引发能源市场的结构性变化，核电复苏、电网扩容成为确定性投资主题。",
+  L6a:"核电因其全天候零碳特性，成为AI数据中心首选能源之一（微软、谷歌均已签署核电PPA）。星座能源（美国最大核电运营商）、NRG能源、NextEra、中国核电、华润电力等直接受益。此外部分可再生能源公司也因AI带动的电力需求增长而受益。",
+  L6b:"连接发电厂与数据中心的输变电设备（变压器、高压电缆、开关设备），以及电网扩容建设。ABB（同时在L5）、GE Vernova、西门子能源、普睿司曼（高压电缆）供应关键电网设备。数据中心新建地点往往受限于电网容量，推动了大规模电网升级投资。",
+  L7: "运营数据中心基础设施（L5），以云服务或算力租赁形式向L8应用层及企业用户出售计算能力。这一层将物理算力\"服务化\"，是AI产业链的流量枢纽。商业模式包括按需付费云计算（IaaS/PaaS）、GPU集群租赁，以及算力运营商模式。",
+  L7a:"全球最大云计算平台（谷歌、亚马逊AWS、微软Azure、Meta）既是AI算力最大的消费者，也是向外部客户交付AI能力的主要渠道。年均资本开支均在千亿美元级别，是L1至L5全产业链的核心需求来源，同时也在L3自研AI芯片（TPU、Trainium）向上游延伸。",
+  L7b:"中国主要云计算平台（阿里云、百度云、京东云等）。受出口管制影响无法充分获得先进NVIDIA GPU，一方面推动采购国产AI芯片（L3f），另一方面加大自研芯片投入。与海外超大规模云相比，中国云平台AI基础设施竞争格局更分散，政策因素影响更显著。",
+  L7c:"中国三大运营商（中国移动、电信、联通）及海外运营商（AT&T、德国电信等）正将自身网络基础设施定位为AI交付管道，在边缘计算、算力调度和5G+AI融合上持续投入。中国运营商同时承担国家算力网络建设任务，数据中心规模和算力云业务快速扩张。",
+  L7d:"以CoreWeave为代表的GPU专项云服务商（Applied Digital、Hut 8、IREN、Core Scientific等），专门采购NVIDIA高端GPU组建算力集群，向AI开发者按小时出租。许多公司从比特币矿场转型而来，利用既有廉价电力资源。商业模式高度依赖NVIDIA GPU供应及AI开发者付费意愿，杠杆高、波动大。",
+  L8: "产业链最末端，利用L7算力平台构建AI产品和服务，直接触达企业和消费者用户。这是最多元化的一层，从底层大模型到垂直应用到IT实施服务均包含在内。商业模式以SaaS订阅、API调用计费、专业服务为主，是AI产业链中变现路径最清晰但竞争格局也最激烈的层级。",
+  L8a:"已有规模的企业软件和云平台公司，将AI深度嵌入现有产品：Salesforce（CRM+AI）、ServiceNow（工作流自动化+AI）、SAP（ERP+AI）、Snowflake（数据平台+AI）、Datadog（AIOps可观测性）、Cloudflare（边缘安全+AI推理）、Adobe（Firefly创意AI）等。收入以订阅为主，AI是提升产品价值和ARPU的核心驱动力。",
+  L8b:"专注特定AI应用场景的纯AI公司：SoundHound AI（语音识别）、C3.ai（企业AI解决方案）、BigBear.ai（国防/情报分析）、Twilio（通信API+AI）、科大讯飞（中国AI语音/NLP龙头，讯飞星火大模型）、商汤科技（中国AI视觉与大模型，覆盖自动驾驶/数字人/安防）等。整体尚处亏损或微利阶段，业务模式仍在快速演进，市场给予较高的成长预期溢价。",
+  L8c:"埃森哲、印孚瑟斯、塔塔咨询、维布络等全球IT咨询和系统集成商是AI在企业侧的「实施渠道」，帮助大型企业将AI工具落地到实际业务流程中；Workday等企业SaaS平台将AI深度嵌入人力资本与财务管理流程。商业模式以项目制咨询、管理服务及SaaS订阅为主，AI浪潮直接带来需求增量，稳定盈利，成长性温和但确定性高。",
+  L8d:"开发基础大语言模型（LLM）和多模态AI模型的公司（目前上市标的主要在港股：智谱、MiniMax）。这类公司是AI能力的核心提供方，通过API调用、企业授权、消费者订阅等多种模式变现，当前处于高投入、高增速、尚未全面盈利的阶段。OpenAI、Anthropic等标志性公司上市后可归入本类。",
+  L8e:"AI时代的网络安全公司，以AI原生架构应对日益复杂的攻击威胁，同时深度使用AI提升检测与响应能力。代表公司：CrowdStrike（AI原生端点保护，Falcon平台）、Palo Alto Networks（平台化整合安全，NexGen ARR超$60亿）、Fortinet（网络防火墙龙头，AI深度整合）、Zscaler（零信任安全架构）。AI浪潮既是网络安全需求的放大器（攻击更复杂），也是产品的差异化核心（AI检测更精准），商业模式以SaaS订阅为主，头部公司均已实现规模盈利。",
+};
+
+const CP_COLORS = ["#2563eb","#16a34a","#dc2626","#9333ea","#ea580c","#0891b2","#ca8a04","#be185d"];
+const CPANEL_PERIODS = {"1W":7,"1M":31,"3M":92,"6M":183,"1Y":365,"2Y":730,"3Y":1095,"5Y":1825};
+const LAYER_COLORS = {L1:"#1d4ed8",L2:"#15803d",L3:"#b91c1c",L4:"#7e22ce",L5:"#0e7490",L6:"#9d174d",L7:"#374151",L8:"#6b7280"};
+const _CAT_PERIOD_DAYS = {"1d":1,"1w":7,"1m":31,"6m":183,"1y":365,"3y":1095};
+
+let G = {
+  summary:null, sortCol:"market_cap_usd", sortDir:-1,
+  openL1:{}, openL2:{}, openDescs:{},
+  chartStock:null, compareSeries:[], compareSelectedIds:new Set(),
+  comparePeriod:"1Y", histCache:{}, catChartData:null,
+  compareRendered:[], chartPeriod:"1y", chartHistory:null,
+};
+
+let _cpRenderSeq = 0;
+
+function _getNextCpColor() {
+  const used = new Set(G.compareSeries.map(s=>s.color));
+  for (const c of CP_COLORS) if (!used.has(c)) return c;
+  return CP_COLORS[G.compareSeries.length % CP_COLORS.length];
+}
+
+function cpToggleSeries(id, type, label) {
+  const idx = G.compareSeries.findIndex(s=>s.id===id);
+  if (idx>=0) { G.compareSeries.splice(idx,1); G.compareSelectedIds.delete(id); }
+  else {
+    if (G.compareSeries.length>=8) return;
+    G.compareSeries.push({id,type,label,color:_getNextCpColor()});
+    G.compareSelectedIds.add(id);
+  }
+  updateCompareTags(); renderTable(); renderCompareChart();
+}
+
+function cpRemoveSeries(id) {
+  G.compareSeries = G.compareSeries.filter(s=>s.id!==id);
+  G.compareSelectedIds.delete(id);
+  updateCompareTags(); renderTable(); renderCompareChart();
+}
+
+function clearAllSeries() {
+  G.compareSeries=[]; G.compareSelectedIds.clear();
+  updateCompareTags(); renderTable(); renderCompareChart();
+}
+
+function setComparePeriod(p) {
+  G.comparePeriod=p;
+  document.querySelectorAll("#tab-aichain .cp-p-btn").forEach(b=>b.classList.toggle("active",b.dataset.p===p));
+  renderCompareChart();
+}
+
+function updateCompareTags() {
+  const el = document.getElementById("ai-cp-tags");
+  if (!el) return;
+  el.innerHTML = G.compareSeries.map(s=>
+    `<span class="cp-tag" style="background:${s.color}">
+       <span class="cp-tag-lbl" title="${s.label}">${s.label}</span>
+       <span class="cp-tag-x" onclick="AIC.cpRemoveSeries('${s.id}');event.stopPropagation()">✕</span>
+     </span>`
+  ).join("");
+}
+
+async function _cpLoadSeriesData(series) {
+  const periodDays = CPANEL_PERIODS[G.comparePeriod]||365;
+  let dates, rawValues;
+  if (series.type==="stock") {
+    const tk=series.id;
+    if (!G.histCache[tk]) {
+      try { const r=await fetch(HISTORY_BASE+encodeURIComponent(tk)+".json?v="+Date.now()); G.histCache[tk]=await r.json(); }
+      catch { return null; }
+    }
+    const h=G.histCache[tk]; dates=h.dates; rawValues=h.prices;
+  } else {
+    if (!G.catChartData) {
+      try { const r=await fetch(CAT_CHART_URL+"?v="+Date.now()); G.catChartData=await r.json(); }
+      catch { return null; }
+    }
+    const cat=G.catChartData?.categories?.[series.id];
+    if (!cat) return null;
+    dates=cat.dates; rawValues=cat.values;
+  }
+  if (!dates?.length||!rawValues?.length) return null;
+  const lastDate=new Date(dates[dates.length-1]+"T12:00:00Z");
+  const cutoffDate=new Date(lastDate.getTime()-periodDays*86400000);
+  const cutoffStr=cutoffDate.toISOString().slice(0,10);
+  let startIdx=dates.findIndex(d=>d>=cutoffStr);
+  if (startIdx<0) startIdx=0;
+  const sd=dates.slice(startIdx); const sv=rawValues.slice(startIdx);
+  if (!sv.length||!sv[0]) return null;
+  const base=sv[0];
+  return {dates:sd, values:sv.map(v=>(v/base-1)*100)};
+}
+
+async function renderCompareChart() {
+  const mySeq=++_cpRenderSeq;
+  const wrap=document.getElementById("ai-cp-chart-wrap");
+  const empty=document.getElementById("ai-cp-empty");
+  const legEl=document.getElementById("ai-cp-legend");
+  if (!wrap) return;
+  d3.select("#ai-cp-svg").remove();
+  d3.select("#tab-aichain .cp-tooltip").remove();
+  if (legEl) legEl.innerHTML="";
+  const snapshot=[...G.compareSeries];
+  if (!snapshot.length) { if (empty) empty.style.display="flex"; return; }
+  if (empty) empty.style.display="none";
+  const dataArr=await Promise.all(snapshot.map(_cpLoadSeriesData));
+  if (mySeq!==_cpRenderSeq) return;
+  const valid=snapshot.map((s,i)=>dataArr[i]?{meta:s,...dataArr[i]}:null).filter(Boolean);
+  G.compareRendered=valid;
+  if (!valid.length) {
+    if (empty){empty.style.display="flex";empty.querySelector("div:last-child").textContent="暂无历史数据（请等待每日更新后重试）";}
+    return;
+  }
+  const parseD=d3.timeParse("%Y-%m-%d");
+  valid.forEach(s=>{s.pd=s.dates.map(parseD);});
+  const rect=wrap.getBoundingClientRect();
+  const W=Math.max(rect.width||340,200), H=Math.max(rect.height||260,160);
+  const M={top:12,right:14,bottom:26,left:46};
+  const iW=W-M.left-M.right, iH=H-M.top-M.bottom;
+  const allPD=valid.flatMap(s=>s.pd), allV=valid.flatMap(s=>s.values);
+  const xScale=d3.scaleTime().domain([d3.min(allPD),d3.max(allPD)]).range([0,iW]);
+  const vMin=Math.min(d3.min(allV),0), vMax=Math.max(d3.max(allV),0);
+  const vPad=Math.max((vMax-vMin)*0.08,2);
+  const yScale=d3.scaleLinear().domain([vMin-vPad,vMax+vPad]).range([iH,0]);
+  const svg=d3.select(wrap).append("svg").attr("id","ai-cp-svg").attr("width",W).attr("height",H);
+  const g=svg.append("g").attr("transform",`translate(${M.left},${M.top})`);
+  g.append("g").attr("class","cp-grid").call(d3.axisLeft(yScale).ticks(5).tickSize(-iW).tickFormat(""));
+  g.append("line").attr("class","cp-zero").attr("x1",0).attr("x2",iW).attr("y1",yScale(0)).attr("y2",yScale(0));
+  const xFmt=["1W","1M"].includes(G.comparePeriod)?d3.timeFormat("%m/%d"):d3.timeFormat("%y/%m");
+  g.append("g").attr("class","cp-axis").attr("transform",`translate(0,${iH})`).call(d3.axisBottom(xScale).ticks(Math.max(3,Math.floor(iW/60))).tickFormat(xFmt));
+  g.append("g").attr("class","cp-axis").call(d3.axisLeft(yScale).ticks(5).tickFormat(v=>(v>=0?"+":"")+v.toFixed(0)+"%"));
+  valid.forEach(s=>{
+    const pts=s.pd.map((d,i)=>({d,v:s.values[i]}));
+    g.append("path").datum(pts).attr("fill","none").attr("stroke",s.meta.color).attr("stroke-width",1.8)
+      .attr("stroke-linejoin","round").attr("stroke-linecap","round")
+      .attr("d",d3.line().x(p=>xScale(p.d)).y(p=>yScale(p.v)).defined(p=>p.d!=null));
+  });
+  const tooltip=d3.select(wrap).append("div").attr("class","cp-tooltip").style("display","none");
+  const vLine=g.append("line").attr("y1",0).attr("y2",iH).attr("stroke","#94a3b8").attr("stroke-width",1).attr("stroke-dasharray","3,2").style("display","none");
+  const bisect=d3.bisector(p=>p.d).left;
+  svg.append("rect").attr("fill","none").attr("pointer-events","all").attr("width",W).attr("height",H)
+    .on("mousemove",function(event){
+      const [mx,my]=d3.pointer(event);
+      const x0=mx-M.left;
+      if (x0<0||x0>iW){tooltip.style("display","none");vLine.style("display","none");return;}
+      vLine.attr("x1",x0).attr("x2",x0).style("display","block");
+      const dateAtX=xScale.invert(x0);
+      let html=`<div style="color:#94a3b8;margin-bottom:2px">${d3.timeFormat("%Y/%m/%d")(dateAtX)}</div>`;
+      valid.forEach(s=>{
+        const pts=s.pd.map((d,i)=>({d,v:s.values[i]}));
+        const idx=Math.min(bisect(pts,dateAtX),pts.length-1);
+        if (idx>=0){const v=pts[idx].v;html+=`<div style="display:flex;align-items:center;gap:5px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${s.meta.color}"></span><span>${s.meta.label}</span><b style="margin-left:auto;padding-left:10px;color:${v>=0?'#86efac':'#fca5a5'}">${v>=0?"+":""}${v.toFixed(2)}%</b></div>`;}
+      });
+      const tW=tooltip.node().offsetWidth||200;
+      tooltip.html(html).style("display","block").style("left",Math.min(mx+12,W-tW-8)+"px").style("top",Math.max(my-30,4)+"px");
+    })
+    .on("mouseleave",()=>{tooltip.style("display","none");vLine.style("display","none");});
+  if (legEl) {
+    legEl.innerHTML=valid.map(s=>`<div class="cpl-item" onclick="AIC.cpRemoveSeries('${s.meta.id}')" title="点击移除"><span class="cpl-dot" style="background:${s.meta.color}"></span><span>${s.meta.label}</span></div>`).join("");
+  }
+}
+
+function downloadCompareCsv() {
+  if (!G.compareRendered?.length) return;
+  const allDates=[...new Set(G.compareRendered.flatMap(s=>s.dates))].sort();
+  const headers=["日期",...G.compareRendered.map(s=>s.meta.label)];
+  const rows=[headers.join(",")];
+  allDates.forEach(date=>{
+    const row=[date];
+    G.compareRendered.forEach(s=>{const i=s.dates.indexOf(date);row.push(i>=0?s.values[i].toFixed(2)+"%":"");});
+    rows.push(row.join(","));
+  });
+  const blob=new Blob(["﻿"+rows.join("\n")],{type:"text/csv;charset=utf-8"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");a.href=url;a.download=`ai_compare_${G.comparePeriod}.csv`;a.click();URL.revokeObjectURL(url);
+}
+
+function saveComparePng() {
+  const svg=document.getElementById("ai-cp-svg");
+  if (!svg) return;
+  const W=+svg.getAttribute("width"),H=+svg.getAttribute("height");
+  const svgStr=new XMLSerializer().serializeToString(svg);
+  const canvas=document.createElement("canvas");
+  canvas.width=W*2;canvas.height=H*2;
+  const ctx=canvas.getContext("2d");ctx.scale(2,2);ctx.fillStyle="#fff";ctx.fillRect(0,0,W,H);
+  const img=new Image();
+  img.onload=()=>{ctx.drawImage(img,0,0);const a=document.createElement("a");a.download=`ai_compare_${G.comparePeriod}.png`;a.href=canvas.toDataURL("image/png");a.click();};
+  img.src="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svgStr);
+}
+
+const fmt={
+  cap:  v=>v!=null?v.toFixed(0)+"":"—",
+  pct:  v=>v!=null?(v>0?"+":"")+v.toFixed(2)+"%":"—",
+  val:  v=>v!=null?v.toFixed(2):"—",
+  price:v=>v!=null?v.toLocaleString(undefined,{maximumFractionDigits:2}):"—",
+};
+
+function retClass(v) { if (v==null) return "ret-z"; return v>0?"ret-p":v<0?"ret-n":"ret-z"; }
+
+function setLoading(msg) {
+  document.getElementById("ai-loading-msg").textContent=msg;
+  document.getElementById("ai-loading-overlay").classList.remove("hidden");
+}
+function hideLoading() { document.getElementById("ai-loading-overlay").classList.add("hidden"); }
+
+async function loadAll() {
+  setLoading("加载产业链数据...");
+  try {
+    const [summary,catChart]=await Promise.all([
+      fetch(SUMMARY_URL+"?v="+Date.now()).then(r=>r.json()),
+      fetch(CAT_CHART_URL+"?v="+Date.now()).then(r=>r.json()).catch(()=>null),
+    ]);
+    G.summary=summary; G.catChartData=catChart;
+  } catch(e) {
+    setLoading("⚠ summary.json 未找到。请先运行 GitHub Actions 初始化数据。"); return;
+  }
+  setLoading("渲染界面...");
+  buildTable(); updateTopbar(); hideLoading();
+}
+
+async function refreshData() {
+  const btn=document.getElementById("ai-refresh-btn");
+  btn.textContent="加载中..."; btn.classList.add("loading");
+  try { const r=await fetch(SUMMARY_URL+"?v="+Date.now()); G.summary=await r.json(); renderTable(); updateTopbar(); }
+  catch(e) { console.warn("重新加载失败",e); }
+  btn.textContent="↻ 重新加载"; btn.classList.remove("loading");
+}
+
+function updateTopbar() {
+  const ts=G.summary?.generated_at||"未知";
+  const d=new Date(ts);
+  const local=isNaN(d)?ts:d.toLocaleString("zh-CN",{timeZone:"Asia/Shanghai"});
+  document.getElementById("ai-update-info").textContent=`数据截至：${local}（北京时间）`;
+}
+
+function catRet(catId,period) {
+  const cat=G.catChartData?.categories?.[catId];
+  if (!cat?.dates?.length) return null;
+  const {dates,values}=cat;
+  const curr=values[values.length-1];
+  let base;
+  if (period==="1d") { if (values.length<2) return null; base=values[values.length-2]; }
+  else {
+    const calDays=_CAT_PERIOD_DAYS[period]; if (!calDays) return null;
+    const lastDate=new Date(dates[dates.length-1]+"T12:00:00Z");
+    const cutoffStr=new Date(lastDate-calDays*86400000).toISOString().slice(0,10);
+    let idx=dates.findIndex(d=>d>=cutoffStr); if (idx<0) idx=0; base=values[idx];
+  }
+  if (!base) return null;
+  return +((curr/base-1)*100).toFixed(2);
+}
+
+function buildTable() {
+  if (!G.summary) return;
+  const sel=document.getElementById("ai-filter-l1");
+  sel.innerHTML='<option value="">全部层级</option>';
+  const layers=G.summary.layers||{};
+  Object.entries(layers).forEach(([k,v])=>{
+    const opt=document.createElement("option");opt.value=k;opt.textContent=k+" "+v.name;sel.appendChild(opt);
+  });
+  G.summary.stocks.forEach(s=>{
+    if (!(s.l1 in G.openL1)) G.openL1[s.l1]=false;
+    if (!(s.l2 in G.openL2)) G.openL2[s.l2]=false;
+  });
+  renderTable();
+}
+
+function renderTable() {
+  const body=document.getElementById("ai-table-body");
+  body.innerHTML=""; if (!G.summary) return;
+  const search=document.getElementById("ai-search-box").value.toLowerCase();
+  const fL1=document.getElementById("ai-filter-l1").value;
+  const fMkt=document.getElementById("ai-filter-market").value;
+  const layers=G.summary.layers||{};
+  const allStocks=G.summary.stocks;
+  const filtered=allStocks.filter(s=>{
+    if (fL1&&s.l1!==fL1) return false;
+    if (fMkt&&s.market!==fMkt) return false;
+    if (search){const hay=(s.name_cn+s.name_en+s.ticker).toLowerCase();if (!hay.includes(search)) return false;}
+    return true;
+  });
+  const {sortCol,sortDir}=G;
+  filtered.sort((a,b)=>{
+    let va,vb;
+    if (sortCol==="name"){va=a.name_cn;vb=b.name_cn;return sortDir*va.localeCompare(vb);}
+    if (sortCol==="market"){va=a.market;vb=b.market;return sortDir*va.localeCompare(vb);}
+    if (sortCol==="ticker"){va=a.ticker;vb=b.ticker;return sortDir*va.localeCompare(vb);}
+    if (["1d","1w","1m","6m","1y","3y"].includes(sortCol)){va=a.returns?.[sortCol];vb=b.returns?.[sortCol];}
+    else{va=a[sortCol];vb=b[sortCol];}
+    va=va??-Infinity;vb=vb??-Infinity;return sortDir*(va-vb);
+  });
+  // 全产业链合计行
+  {
+    const seen=new Set();
+    const dedup=G.summary.stocks.filter(s=>{if (seen.has(s.ticker)) return false;seen.add(s.ticker);return true;});
+    const totalCap=dedup.reduce((sum,s)=>sum+(s.market_cap_usd||0),0);
+    const PERIODS=["1d","1w","1m","6m","1y","3y"];
+    const totalRetCells=PERIODS.map(p=>{const v=catRet("ALL",p);return `<td class="${retClass(v)}">${fmt.pct(v)}</td>`;}).join("");
+    const totalRow=document.createElement("tr");
+    const totalSel=G.compareSelectedIds.has("ALL");
+    const totalColor=G.compareSeries.find(s=>s.id==="ALL")?.color||"#2563eb";
+    totalRow.className="group-total"+(totalSel?" cp-row-sel":"");
+    if (totalSel) totalRow.style.setProperty("--cp-color",totalColor);
+    totalRow.style.cursor="pointer";
+    totalRow.innerHTML=`<td class="name-cell" style="padding-left:10px">◈ 全产业链合计<span style="margin-left:8px;font-size:11px;color:#94a3b8;font-weight:400">${dedup.length}只（已去重）</span></td><td></td><td></td><td class="num">${fmt.cap(totalCap)}</td><td></td>${totalRetCells}<td></td><td></td><td></td>`;
+    totalRow.onclick=()=>cpToggleSeries("ALL","l1","全产业链合计");
+    body.appendChild(totalRow);
+  }
+  const l1Groups={};
+  filtered.forEach(s=>{if (!l1Groups[s.l1]) l1Groups[s.l1]={};if (!l1Groups[s.l1][s.l2]) l1Groups[s.l1][s.l2]=[];l1Groups[s.l1][s.l2].push(s);});
+  let visCount=0;
+  const layerOrder=["L1","L2","L3","L4","L5","L6","L7","L8"];
+  layerOrder.forEach(l1=>{
+    if (!l1Groups[l1]) return;
+    const l1Open=G.openL1[l1]!==false;
+    const layerMeta=layers[l1]||{};
+    const l1Stocks=Object.values(l1Groups[l1]).flat();
+    const capSum=l1Stocks.reduce((s,x)=>s+(x.market_cap_usd||0),0);
+    const PERIODS=["1d","1w","1m","6m","1y","3y"];
+    const l1RetCells=PERIODS.map(p=>{const v=catRet(l1,p);return `<td class="${retClass(v)}">${fmt.pct(v)}</td>`;}).join("");
+    const l1Row=document.createElement("tr");
+    const l1Sel=G.compareSelectedIds.has(l1);
+    const l1Color=G.compareSeries.find(s=>s.id===l1)?.color||LAYER_COLORS[l1]||"#2563eb";
+    l1Row.className="group-l1"+(l1Sel?" cp-row-sel":"");
+    if (l1Sel) l1Row.style.setProperty("--cp-color",l1Color);
+    const l1DescOpen=!!G.openDescs[l1];
+    l1Row.innerHTML=`<td class="name-cell" style="padding-left:10px"><span class="expand-btn" onclick="AIC.toggleL1('${l1}');event.stopPropagation()" style="margin-right:5px;cursor:pointer">${l1Open?"▼":"▶"}</span><span style="color:${LAYER_COLORS[l1]||'#2563eb'}">${l1}</span><span style="margin-left:5px">${layerMeta.name||""}</span><span style="margin-left:10px;font-size:11px;color:#94a3b8;font-weight:400">${l1Stocks.length}只</span><span class="desc-btn${l1DescOpen?" active":""}" onclick="AIC.toggleDesc('${l1}',event)" title="查看分类说明">ⓘ</span></td><td></td><td></td><td class="num">${fmt.cap(capSum)}</td><td></td>${l1RetCells}<td></td><td></td><td></td>`;
+    l1Row.onclick=(e)=>{if (e.target.closest(".expand-btn")||e.target.closest(".desc-btn")) return;cpToggleSeries(l1,"l1",(layerMeta.name||l1));};
+    body.appendChild(l1Row);
+    const l1DescRow=document.createElement("tr");l1DescRow.id="ai-desc-row-"+l1;l1DescRow.className="desc-row"+(l1DescOpen?"":" collapsed");l1DescRow.innerHTML=`<td colspan="14" class="desc-cell">${LAYER_DESCS[l1]||""}</td>`;body.appendChild(l1DescRow);
+    Object.entries(l1Groups[l1]).forEach(([l2,slist])=>{
+      const l2Open=G.openL2[l2]!==false;
+      const capS=slist.reduce((s,x)=>s+(x.market_cap_usd||0),0);
+      const l2RetCells=PERIODS.map(p=>{const v=catRet(l2,p);return `<td class="${retClass(v)}">${fmt.pct(v)}</td>`;}).join("");
+      const l2Row=document.createElement("tr");
+      const l2Sel=G.compareSelectedIds.has(l2);
+      const l2Color=G.compareSeries.find(s=>s.id===l2)?.color||LAYER_COLORS[l1]||"#64748b";
+      l2Row.className="group-l2"+(l1Open?"":" collapsed")+(l2Sel?" cp-row-sel":"");
+      if (l2Sel) l2Row.style.setProperty("--cp-color",l2Color);
+      l2Row.dataset.l1=l1;
+      const l2DescOpen=!!G.openDescs[l2];
+      l2Row.innerHTML=`<td class="name-cell" style="padding-left:24px"><span class="expand-btn" onclick="AIC.toggleL2('${l2}');event.stopPropagation()" style="margin-right:5px;cursor:pointer">${l2Open?"▼":"▶"}</span>${slist[0]?.l2_name||l2}<span style="margin-left:10px;font-size:10px;color:#6b7280">${slist.length}只</span><span class="desc-btn${l2DescOpen?" active":""}" onclick="AIC.toggleDesc('${l2}',event)" title="查看分类说明">ⓘ</span></td><td></td><td></td><td class="num">${fmt.cap(capS)}</td><td></td>${l2RetCells}<td></td><td></td><td></td>`;
+      l2Row.onclick=(e)=>{if (e.target.closest(".expand-btn")||e.target.closest(".desc-btn")) return;cpToggleSeries(l2,"l2",(slist[0]?.l2_name||l2));};
+      body.appendChild(l2Row);
+      const l2DescRow=document.createElement("tr");l2DescRow.id="ai-desc-row-"+l2;l2DescRow.dataset.l1=l1;l2DescRow.className="desc-row"+(!l1Open||!l2DescOpen?" collapsed":"");l2DescRow.innerHTML=`<td colspan="14" class="desc-cell">${LAYER_DESCS[l2]||""}</td>`;body.appendChild(l2DescRow);
+      slist.forEach(s=>{
+        visCount++;
+        const r=s.returns||{};
+        const tr=document.createElement("tr");
+        const tkSel=G.compareSelectedIds.has(s.ticker);
+        const tkColor=G.compareSeries.find(x=>x.id===s.ticker)?.color||"#2563eb";
+        tr.className="stock-row-t"+(!l1Open||!l2Open?" collapsed":"")+(tkSel?" cp-row-sel":"");
+        if (tkSel) tr.style.setProperty("--cp-color",tkColor);
+        tr.dataset.l1=l1;tr.dataset.l2=l2;tr.style.cursor="pointer";
+        tr.onclick=()=>cpToggleSeries(s.ticker,"stock",s.name_cn+"（"+s.ticker+"）");
+        tr.innerHTML=`<td class="name-cell"><div class="cn">${s.name_cn}</div><div class="tk">${s.name_en}</div></td><td class="mkt-badge"><span class="mkt-tag">${s.market}</span></td><td>${s.ticker}</td><td class="num">${fmt.cap(s.market_cap_usd)}</td><td class="num">${fmt.price(s.last_price)}</td><td class="${retClass(r["1d"])}">${fmt.pct(r["1d"])}</td><td class="${retClass(r["1w"])}">${fmt.pct(r["1w"])}</td><td class="${retClass(r["1m"])}">${fmt.pct(r["1m"])}</td><td class="${retClass(r["6m"])}">${fmt.pct(r["6m"])}</td><td class="${retClass(r["1y"])}">${fmt.pct(r["1y"])}</td><td class="${retClass(r["3y"])}">${fmt.pct(r["3y"])}</td><td class="num">${fmt.val(s.pe)}</td><td class="num">${fmt.val(s.ps)}</td><td class="num">${fmt.val(s.pb)}</td>`;
+        body.appendChild(tr);
+      });
+    });
+  });
+  document.getElementById("ai-table-stats").textContent=`显示 ${visCount} 只 / 共 ${G.summary.stocks.length} 只`;
+  document.querySelectorAll("#ai-stock-table thead th[data-col]").forEach(th=>{
+    th.onclick=()=>{
+      const col=th.dataset.col;
+      if (G.sortCol===col) G.sortDir*=-1; else{G.sortCol=col;G.sortDir=-1;}
+      document.querySelectorAll("#ai-stock-table thead th").forEach(h=>h.classList.remove("sort-asc","sort-desc"));
+      th.classList.add(G.sortDir===1?"sort-asc":"sort-desc");
+      renderTable();
+    };
+  });
+}
+
+function filterTable() { renderTable(); }
+
+function collapseAll() {
+  Object.keys(G.openL1).forEach(k=>{G.openL1[k]=false;});
+  Object.keys(G.openL2).forEach(k=>{G.openL2[k]=false;});
+  renderTable();
+}
+
+function toggleDesc(id,event) {
+  event.stopPropagation();
+  G.openDescs[id]=!G.openDescs[id];
+  const row=document.getElementById("ai-desc-row-"+id);
+  if (row) row.classList.toggle("collapsed",!G.openDescs[id]);
+  event.currentTarget.classList.toggle("active",!!G.openDescs[id]);
+}
+
+function toggleL1(l1) {
+  G.openL1[l1]=!G.openL1[l1];
+  document.querySelectorAll(`#tab-aichain tr[data-l1="${l1}"]`).forEach(tr=>tr.classList.toggle("collapsed",!G.openL1[l1]));
+  renderTable();
+}
+
+function toggleL2(l2) {
+  G.openL2[l2]=!G.openL2[l2];
+  document.querySelectorAll(`#tab-aichain tr.stock-row-t[data-l2="${l2}"]`).forEach(tr=>{
+    const l1=tr.dataset.l1;tr.classList.toggle("collapsed",!G.openL2[l2]||!G.openL1[l1]);
+  });
+  renderTable();
+}
+
+async function openChart(ticker) {
+  G.chartStock=ticker;
+  const s=G.summary?.stocks.find(x=>x.ticker===ticker);
+  document.getElementById("ai-chart-title").textContent=(s?.name_cn||ticker)+"（"+ticker+"）";
+  document.getElementById("ai-chart-subtitle").textContent=(s?.name_en||"")+" · "+(s?.market||"")+" · 前复权收盘价";
+  document.getElementById("ai-chart-modal").classList.add("open");
+  if (!G.chartHistory||G.chartHistory.ticker!==ticker) {
+    try { const r=await fetch(`${HISTORY_BASE}${ticker}.json`); G.chartHistory=await r.json(); }
+    catch(e) { G.chartHistory=null; }
+  }
+  drawChart(G.chartPeriod);
+}
+
+function closeChart(e) {
+  if (!e||e.target===document.getElementById("ai-chart-modal")||e.type==="click") {
+    document.getElementById("ai-chart-modal").classList.remove("open");
+  }
+}
+
+function setChartPeriod(p) {
+  G.chartPeriod=p;
+  document.querySelectorAll("#ai-chart-period-btns .period-btn").forEach(b=>b.classList.toggle("active",b.textContent===({
+    "1m":"1月","3m":"3月","1y":"1年","3y":"3年","all":"全部"
+  }[p])));
+  drawChart(p);
+}
+
+function drawChart(period) {
+  const h=G.chartHistory;
+  if (!h||!h.dates?.length){
+    d3.select("#ai-price-chart").selectAll("*").remove();
+    d3.select("#ai-price-chart").append("text").attr("x","50%").attr("y","50%").attr("text-anchor","middle").attr("fill","#6b7280").text("暂无历史数据");
+    return;
+  }
+  const now=new Date();
+  const cutoff={"1m":new Date(now-30*86400000),"3m":new Date(now-90*86400000),"1y":new Date(now-365*86400000),"3y":new Date(now-3*365*86400000),"all":new Date(0)}[period]||new Date(0);
+  const pairs=h.dates.map((d,i)=>({d:new Date(d),v:h.prices[i]})).filter(x=>x.d>=cutoff&&x.v!=null);
+  if (pairs.length<2) return;
+  const svg=d3.select("#ai-price-chart");svg.selectAll("*").remove();
+  const W=document.getElementById("ai-chart-box").clientWidth-40, H=220;
+  const m={top:10,right:20,bottom:30,left:55};
+  const w=W-m.left-m.right, h2=H-m.top-m.bottom;
+  svg.attr("width",W).attr("height",H);
+  const g=svg.append("g").attr("transform",`translate(${m.left},${m.top})`);
+  const x=d3.scaleTime().domain(d3.extent(pairs,d=>d.d)).range([0,w]);
+  const y=d3.scaleLinear().domain([d3.min(pairs,d=>d.v)*0.98,d3.max(pairs,d=>d.v)*1.02]).range([h2,0]);
+  const grad=svg.append("defs").append("linearGradient").attr("id","ai-area-grad").attr("x1","0%").attr("x2","0%").attr("y1","0%").attr("y2","100%");
+  grad.append("stop").attr("offset","0%").attr("stop-color","#3b82f6").attr("stop-opacity",0.3);
+  grad.append("stop").attr("offset","100%").attr("stop-color","#3b82f6").attr("stop-opacity",0.02);
+  g.append("path").datum(pairs).attr("fill","url(#ai-area-grad)").attr("d",d3.area().x(d=>x(d.d)).y0(h2).y1(d=>y(d.v)).curve(d3.curveMonotoneX));
+  const isUp=pairs[pairs.length-1].v>=pairs[0].v;
+  g.append("path").datum(pairs).attr("fill","none").attr("stroke",isUp?"#059669":"#dc2626").attr("stroke-width",1.5).attr("d",d3.line().x(d=>x(d.d)).y(d=>y(d.v)).curve(d3.curveMonotoneX));
+  g.append("g").attr("transform",`translate(0,${h2})`).call(d3.axisBottom(x).ticks(5).tickFormat(d3.timeFormat("%y/%m"))).call(g=>g.select(".domain").attr("stroke","#e2e8f0")).call(g=>g.selectAll("text").attr("fill","#64748b").attr("font-size","10px")).call(g=>g.selectAll(".tick line").attr("stroke","#e2e8f0"));
+  g.append("g").call(d3.axisLeft(y).ticks(5)).call(g=>g.select(".domain").attr("stroke","#e2e8f0")).call(g=>g.selectAll("text").attr("fill","#64748b").attr("font-size","10px")).call(g=>g.selectAll(".tick line").attr("stroke","#e2e8f0"));
+}
+
+window.AIC = {
+  loadAll, refreshData, cpToggleSeries, cpRemoveSeries, clearAllSeries,
+  setComparePeriod, downloadCompareCsv, saveComparePng,
+  filterTable, collapseAll, toggleDesc, toggleL1, toggleL2,
+  openChart, closeChart, setChartPeriod,
+};
+})();
 </script>
 </body>
 </html>

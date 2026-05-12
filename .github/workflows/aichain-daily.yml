@@ -1,0 +1,40 @@
+name: AI产业链每日价格更新
+
+on:
+  schedule:
+    # 北京时间每天凌晨1:00（UTC 17:00）——覆盖全球各时区交易日
+    - cron: "0 17 * * *"
+  workflow_dispatch:   # 支持手动触发
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      - name: Setup Python
+        uses: actions/setup-python@v5.4.0
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run daily update
+        run: python scripts/aichain_daily_update.py
+
+      - name: Commit and push updated data
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin main
+          git add data/aichain/
+          git diff --cached --quiet || git commit -m "AI产业链每日数据更新 $(date -u +'%Y-%m-%d %H:%M') UTC"
+          git push
