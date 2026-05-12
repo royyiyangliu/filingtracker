@@ -45,9 +45,32 @@
       display: flex;
       gap: 0;
       border-top: 1px solid #2d3150;
+      align-items: flex-end;
+    }
+    .tab-group {
+      display: flex;
+      flex-direction: column;
+    }
+    .tab-group + .tab-group {
+      border-left: 1px solid #2d3150;
+    }
+    .tab-group-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: #64748b;
+      letter-spacing: 0.7px;
+      text-transform: uppercase;
+      text-align: center;
+      padding: 5px 14px 4px;
+      background: #13132a;
+      border-bottom: 1px solid #2d3150;
+      white-space: nowrap;
+    }
+    .tab-group-btns {
+      display: flex;
     }
     .tab-btn {
-      padding: 10px 22px;
+      padding: 8px 20px;
       font-size: 13px;
       font-weight: 500;
       color: #9ba3bc;
@@ -474,12 +497,27 @@
     <div class="header-meta" id="meta-sec"></div>
   </div>
   <div class="tabs">
-    <button class="tab-btn active" onclick="switchTab('sec',   this)">SEC 持仓披露</button>
-    <button class="tab-btn"        onclick="switchTab('di',    this)">港股股东披露</button>
-    <button class="tab-btn"        onclick="switchTab('hk',    this)">港股回购</button>
-    <button class="tab-btn"        onclick="switchTab('flow',  this)">南向资金流向</button>
-    <button class="tab-btn"        onclick="switchTab('stocks',this)">个股持仓</button>
-    <button class="tab-btn"        onclick="switchTab('aichain',this)">AI产业链</button>
+    <div class="tab-group">
+      <div class="tab-group-label">SEC 披露</div>
+      <div class="tab-group-btns">
+        <button class="tab-btn active" onclick="switchTab('sec', this)">股东持仓</button>
+      </div>
+    </div>
+    <div class="tab-group">
+      <div class="tab-group-label">港交所披露</div>
+      <div class="tab-group-btns">
+        <button class="tab-btn" onclick="switchTab('di',     this)">股东持仓</button>
+        <button class="tab-btn" onclick="switchTab('hk',     this)">回购</button>
+        <button class="tab-btn" onclick="switchTab('flow',   this)">南向资金流</button>
+        <button class="tab-btn" onclick="switchTab('stocks', this)">南向个股持仓</button>
+      </div>
+    </div>
+    <div class="tab-group">
+      <div class="tab-group-label">股价看板</div>
+      <div class="tab-group-btns">
+        <button class="tab-btn" onclick="switchTab('aichain', this)">AI 产业链</button>
+      </div>
+    </div>
   </div>
 </div>
 
