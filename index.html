@@ -495,6 +495,11 @@
       <div class="header-sub">SEC机构持仓 · 港股股东披露 · 港股回购 · 港股通南向资金</div>
     </div>
     <div class="header-meta" id="meta-sec"></div>
+    <div class="header-meta" id="meta-di"      style="display:none"></div>
+    <div class="header-meta" id="meta-hk"      style="display:none"></div>
+    <div class="header-meta" id="meta-flow"    style="display:none"></div>
+    <div class="header-meta" id="meta-stocks"  style="display:none"></div>
+    <div class="header-meta" id="meta-aichain" style="display:none"></div>
   </div>
   <div class="tabs">
     <div class="tab-group">
@@ -983,6 +988,36 @@ function fmtDeltaPct(n) {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
+// META BAR HELPERS
+// ════════════════════════════════════════════════════════════════════════════
+
+function fmtMetaUpdatedAt(isoOrDate) {
+  if (!isoOrDate) return '—';
+  const s = String(isoOrDate);
+  const d = new Date(s);
+  if (isNaN(d)) return s;
+  // Convert to Beijing time (UTC+8) manually for reliability
+  const bj = new Date(d.getTime() + 8 * 60 * 60 * 1000);
+  const y  = bj.getUTCFullYear();
+  const mo = String(bj.getUTCMonth() + 1).padStart(2, '0');
+  const dy = String(bj.getUTCDate()).padStart(2, '0');
+  const h  = String(bj.getUTCHours()).padStart(2, '0');
+  const mi = String(bj.getUTCMinutes()).padStart(2, '0');
+  return `${y}/${mo}/${dy} ${h}:${mi}`;
+}
+
+function fmtMetaDataDate(dateStr) {
+  if (!dateStr) return '—';
+  return String(dateStr).slice(0, 10).replace(/-/g, '/');
+}
+
+function setTabMeta(tabName, updatedAt, dataDate) {
+  const el = document.getElementById('meta-' + tabName);
+  if (!el) return;
+  el.innerHTML = `最后更新：<span>${fmtMetaUpdatedAt(updatedAt)}</span>，数据截止：<span>${fmtMetaDataDate(dataDate)}</span>`;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
 // TAB SWITCHING
 // ════════════════════════════════════════════════════════════════════════════
 
@@ -993,7 +1028,9 @@ function switchTab(name, btn) {
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById('tab-' + name).classList.add('active');
-  document.getElementById('meta-sec').style.display = name === 'sec' ? '' : 'none';
+  ['sec','di','hk','flow','stocks','aichain'].forEach(t =>
+    document.getElementById('meta-' + t).style.display = (t === name) ? '' : 'none'
+  );
 
   if (name === 'di'      && !diLoaded)        { diLoaded = true;        initDI(); }
   if (name === 'hk'      && !hkLoaded)        { hkLoaded = true;        initHK(); }
@@ -1073,11 +1110,8 @@ async function initSEC() {
     const json = await res.json();
     const allData = json.filings || [];
 
-    const lastUpdated = json.lastUpdated
-      ? new Date(json.lastUpdated).toLocaleDateString('zh-CN', {year:'numeric',month:'2-digit',day:'2-digit'})
-      : '—';
-    document.getElementById('meta-sec').innerHTML =
-      `SEC 更新：<span>${lastUpdated}</span>&nbsp;&nbsp;共 <span>${json.totalCount || allData.length}</span> 条`;
+    const maxFiledDate = allData.reduce((max, f) => (f.filedDate||'') > max ? (f.filedDate||'') : max, '');
+    setTabMeta('sec', json.lastUpdated, maxFiledDate);
     document.getElementById('count-total').textContent = (json.totalCount || allData.length).toLocaleString();
 
     const tickers = [...new Set(allData.map(f => f.ticker))].sort();
@@ -1237,6 +1271,8 @@ async function initDI() {
     const json = await res.json();
     const allData = json.disclosures || [];
 
+    const diMaxDate = allData.reduce((max, r) => (r.disclosureDate||'') > max ? (r.disclosureDate||'') : max, '');
+    setTabMeta('di', json.lastUpdated, diMaxDate);
     document.getElementById('di-count-total').textContent = (json.totalCount || allData.length).toLocaleString();
 
     // 填充公司筛选下拉
@@ -1456,6 +1492,8 @@ async function initHK() {
     const json = await res.json();
     hkAllData = json.buybacks || [];
 
+    const hkMaxDate = hkAllData.reduce((max, r) => (r.tradingDate||'') > max ? (r.tradingDate||'') : max, '');
+    setTabMeta('hk', json.lastUpdated, hkMaxDate);
     document.getElementById('hk-count-total').textContent = (json.totalCount || hkAllData.length).toLocaleString();
 
     // Populate company dropdown (sorted by CN name)
@@ -1564,6 +1602,7 @@ function initHkFlow() {
       hkFlowData = data;
       const latest = [...(data.hu||[]),...(data.shen||[])].map(d=>d.date).sort().slice(-1)[0]||'';
       document.getElementById('hkf-date-info').textContent = latest ? '数据截至：' + latest : '';
+      setTabMeta('flow', (data.updated||'') + 'T18:00:00+08:00', latest);
       hkFlowRender();
     })
     .catch(e => {
@@ -1760,6 +1799,7 @@ function initHkStocks() {
     .then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
     .then(data=>{
       hksRankData = data;
+      setTabMeta('stocks', (data.updated||'') + 'T18:00:00+08:00', data.latest_date);
       hksBuildIndDropdown();
       hksRenderAll();
     })
@@ -2284,6 +2324,17 @@ function updateTopbar() {
   const d=new Date(ts);
   const local=isNaN(d)?ts:d.toLocaleString("zh-CN",{timeZone:"Asia/Shanghai"});
   document.getElementById("ai-update-info").textContent=`数据截至：${local}（北京时间）`;
+  // 取 chart_categories 中各分类最新日期作为数据截止
+  let latestDataDate = '';
+  if (G.catChartData?.categories) {
+    const allEnds = Object.values(G.catChartData.categories)
+      .map(c => c.dates?.length ? c.dates[c.dates.length-1] : '')
+      .filter(Boolean);
+    allEnds.sort();
+    latestDataDate = allEnds[allEnds.length-1] || '';
+  }
+  if (!latestDataDate && ts !== '未知') latestDataDate = ts.slice(0, 10);
+  setTabMeta('aichain', ts, latestDataDate);
 }
 
 function catRet(catId,period) {
