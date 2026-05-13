@@ -2026,11 +2026,16 @@ function hksDrawMulti() {
   svg.on('mousemove',function(event){
     const [mx]=d3.pointer(event,g.node()); const x0=x.invert(mx);
     tipLine.style('display',null).attr('x1',mx).attr('x2',mx);
-    let html=`<span style="color:#ccc">${fmtD(x0)}</span>`;
+    const pts=[];
     series.forEach(s=>{
       const bis=d3.bisector(p=>p.date).left; const i=bis(s.points,x0,1);
       if(i<=0)return;
       const d=i>=s.points.length ? s.points[s.points.length-1] : (x0-s.points[i-1].date>s.points[i].date-x0?s.points[i]:s.points[i-1]);
+      pts.push({s,d});
+    });
+    if(!pts.length){tip.style('display','none');tipLine.style('display','none');return;}
+    let html=`<span style="color:#ccc">${fmtD(pts[0].d.date)}</span>`;
+    pts.forEach(({s,d})=>{
       html+=`<br/><span style="color:${HKS_COLORS[s.colorIdx]}">■</span> ${s.name}：<b>${d.pct.toFixed(4)}%</b>`;
     });
     tip.style('display','block').style('left',(event.offsetX+14)+'px').style('top',(event.offsetY-10)+'px').html(html);
