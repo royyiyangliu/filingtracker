@@ -2029,8 +2029,8 @@ function hksDrawMulti() {
     let html=`<span style="color:#ccc">${fmtD(x0)}</span>`;
     series.forEach(s=>{
       const bis=d3.bisector(p=>p.date).left; const i=bis(s.points,x0,1);
-      if(i<=0||i>=s.points.length)return;
-      const d=x0-s.points[i-1].date>s.points[i].date-x0?s.points[i]:s.points[i-1];
+      if(i<=0)return;
+      const d=i>=s.points.length ? s.points[s.points.length-1] : (x0-s.points[i-1].date>s.points[i].date-x0?s.points[i]:s.points[i-1]);
       html+=`<br/><span style="color:${HKS_COLORS[s.colorIdx]}">■</span> ${s.name}：<b>${d.pct.toFixed(4)}%</b>`;
     });
     tip.style('display','block').style('left',(event.offsetX+14)+'px').style('top',(event.offsetY-10)+'px').html(html);
