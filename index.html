@@ -746,13 +746,16 @@
         <div class="card-title" id="hks-chart-title" style="margin-bottom:6px">
           点击下方股票查看南向持仓比例历史（最多同时选8只）
         </div>
-        <div id="hks-sel-chips" class="sel-chips" style="margin-bottom:8px"></div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <div id="hks-sel-chips" class="sel-chips" style="flex:1"></div>
+          <button id="hks-clear-btn" onclick="hksClearAllStocks()" style="display:none;flex-shrink:0;padding:2px 10px;border:1px solid #d0d0d0;border-radius:4px;background:#fff;font-size:12px;color:#555;cursor:pointer" onmouseover="this.style.borderColor='#1a73e8';this.style.color='#1a73e8'" onmouseout="this.style.borderColor='#d0d0d0';this.style.color='#555'">✕ 清空</button>
+        </div>
         <div id="hks-stock-chart" class="chart-box">
           <div class="chart-hint">← 请在列表中选择股票</div>
         </div>
       </div>
       <div class="hk-ind-col">
-        <div class="hk-ind-title">行业净买入（亿港元，当前周期）</div>
+        <div class="hk-ind-title" id="hks-ind-title">行业净买入（亿港元，1日）</div>
         <div class="hk-ind-wrap">
           <table class="hk-ind-table">
             <tbody id="hks-ind-summary-tbody">
@@ -1770,6 +1773,8 @@ function initHkStocks() {
       document.querySelectorAll('#hks-period-btns .hk-btn').forEach(b=>b.classList.remove('active'));
       btn.classList.add('active');
       hksPeriod = btn.dataset.period;
+      const titleEl = document.getElementById('hks-ind-title');
+      if (titleEl) titleEl.textContent = `行业净买入（亿港元，${btn.textContent}）`;
       hksFilterInds.clear();
       hksClearInds();
       hksRenderAll();
@@ -1959,12 +1964,19 @@ function hksDeselectStock(code) {
 }
 function hksRenderChips() {
   const el=document.getElementById('hks-sel-chips');
-  if (hksSelected.size===0){el.innerHTML='';return;}
+  const btn=document.getElementById('hks-clear-btn');
+  if (hksSelected.size===0){el.innerHTML='';if(btn)btn.style.display='none';return;}
   el.innerHTML=[...hksSelected.entries()].map(([code,{name,colorIdx}])=>
     `<span class="sel-chip" style="background:${HKS_COLORS[colorIdx]}" onclick="hksDeselectStock('${code}')">
        <span>${name}（${code}）</span><span class="rm">✕</span>
      </span>`
   ).join('');
+  if(btn)btn.style.display='';
+}
+function hksClearAllStocks() {
+  for(const [code,{colorIdx}] of hksSelected) hksColorUsed.delete(colorIdx);
+  hksSelected.clear();
+  hksRenderTable(); hksRenderChips(); hksDrawMulti();
 }
 
 // D3 多股折线图
