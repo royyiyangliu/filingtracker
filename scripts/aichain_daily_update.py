@@ -492,7 +492,7 @@ def build_chart_data(stocks: list, summary_stocks: list) -> None:
 def main():
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 开始每日更新")
 
-    with open(STOCKS_FILE, encoding="utf-8") as f:
+    with open(STOCKS_FILE, encoding="utf-8-sig") as f:
         meta = json.load(f)
     stocks = meta["stocks"]
     layers = meta["layers"]
