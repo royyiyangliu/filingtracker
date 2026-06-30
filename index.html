@@ -327,6 +327,22 @@
     .sel-chip .rm { opacity:.7; font-size:14px; line-height:1; }
     .sel-chip:hover .rm { opacity:1; }
 
+    /* 回购周柱状图：图例 chip + 小按钮 */
+    .bbw-chip {
+      display:inline-flex; align-items:center; gap:5px;
+      padding:2px 9px; border-radius:12px; border:1px solid #e2e2e2;
+      background:#fff; font-size:12px; color:#444; cursor:pointer;
+      user-select:none; transition:all .12s;
+    }
+    .bbw-chip:hover { border-color:#1a73e8; }
+    .bbw-chip.off { color:#aaa; background:#f6f6f6; }
+    .bbw-chip .bbw-sw { width:10px; height:10px; border-radius:2px; flex-shrink:0; }
+    .bbw-mini-btn {
+      border:1px solid #d0d0d0; background:#fff; padding:3px 10px;
+      border-radius:4px; cursor:pointer; font-size:12px; color:#555; transition:all .15s;
+    }
+    .bbw-mini-btn:hover { border-color:#1a73e8; color:#1a73e8; }
+
     /* 行业下拉多选 */
     .hk-ind-dropdown { position:relative; }
     .hk-ind-dd-btn {
@@ -641,6 +657,35 @@
 <!-- TAB: HK BUYBACK                                                           -->
 <!-- ══════════════════════════════════════════════════════════════════════════ -->
 <div id="tab-hk" class="tab-panel">
+
+  <!-- 顶部：每周回购总额堆叠柱状图（折合人民币） -->
+  <div class="hk-panel" style="max-width:none; margin:16px 0 0; padding:0 24px;">
+  <div class="card">
+    <div class="controls" style="flex-wrap:wrap;gap:10px 16px;">
+      <div class="ctrl-group">
+        <span class="ctrl-label">显示区间：</span>
+        <div class="btn-group" id="bbw-range-btns">
+          <button class="hk-btn" data-days="90">3月</button>
+          <button class="hk-btn" data-days="180">6月</button>
+          <button class="hk-btn active" data-days="365">1年</button>
+          <button class="hk-btn" data-days="0">全部</button>
+        </div>
+      </div>
+      <div class="ctrl-group" style="margin-left:auto">
+        <span class="ctrl-label" id="bbw-date-info" style="color:#888;font-size:12px"></span>
+      </div>
+    </div>
+    <div class="card-title" style="margin-top:8px">每周回购总额（亿元人民币，按公司堆叠）</div>
+    <div style="display:flex;align-items:center;gap:8px;margin:6px 0 4px;flex-wrap:wrap">
+      <div id="bbw-legend" class="sel-chips" style="flex:1;min-width:200px"></div>
+      <button id="bbw-all-btn"  type="button" class="bbw-mini-btn">全选</button>
+      <button id="bbw-none-btn" type="button" class="bbw-mini-btn">清空</button>
+    </div>
+    <div id="bbw-chart" class="chart-box" style="position:relative">
+      <div class="loading-msg" id="loading-bbw">正在加载图表…</div>
+    </div>
+  </div>
+  </div>
 
   <div class="filters">
     <div class="filter-group">
@@ -1552,6 +1597,150 @@ async function initHK() {
     document.getElementById('error-hk').style.display = 'block';
     document.getElementById('error-hk').textContent = '数据加载失败：' + e.message;
   }
+
+  // 顶部周回购堆叠柱状图（独立加载，失败不影响表格）
+  initBuybackWeekly();
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// 回购 TAB — 顶部「每周回购总额（亿元人民币，按公司堆叠）」柱状图
+// ════════════════════════════════════════════════════════════════════════════
+
+let bbwData = null;            // { companies:[{code,cn,totalYi}], weeks:[{weekStart,weekEnd,totalYi,byCompany}] }
+let bbwDays = 365;             // 显示区间（天），0 = 全部
+let bbwSelected = null;        // Set<code> 当前选中的公司
+let bbwColor = {};             // code -> 颜色
+
+// 11+ 家公司用的离散配色（前 11 个足够覆盖现有公司，留有余量）
+const BBW_PALETTE = [
+  '#4e79a7', '#f28e2b', '#e15759', '#76b7b2', '#59a14f', '#edc948',
+  '#b07aa1', '#ff9da7', '#9c755f', '#bab0ac', '#1a73e8', '#d93025',
+  '#1e8e3e', '#9334e6', '#e8710a', '#12b5cb'
+];
+
+function initBuybackWeekly() {
+  const loading = document.getElementById('loading-bbw');
+  fetch('./data/hk-buyback-weekly.json?v=' + Date.now())
+    .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(data => {
+      bbwData = data;
+      bbwSelected = new Set((data.companies || []).map(c => c.code));
+      (data.companies || []).forEach((c, i) => { bbwColor[c.code] = BBW_PALETTE[i % BBW_PALETTE.length]; });
+      if (loading) loading.style.display = 'none';
+
+      // 区间按钮
+      document.querySelectorAll('#bbw-range-btns .hk-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('#bbw-range-btns .hk-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          bbwDays = +btn.dataset.days;
+          bbwDrawChart();
+        });
+      });
+      document.getElementById('bbw-all-btn').addEventListener('click', () => {
+        bbwSelected = new Set((bbwData.companies || []).map(c => c.code));
+        bbwRenderLegend(); bbwDrawChart();
+      });
+      document.getElementById('bbw-none-btn').addEventListener('click', () => {
+        bbwSelected = new Set();
+        bbwRenderLegend(); bbwDrawChart();
+      });
+
+      const lastWeek = (data.weeks || [])[ (data.weeks || []).length - 1 ];
+      document.getElementById('bbw-date-info').textContent =
+        lastWeek ? `数据截至：${lastWeek.weekEnd}（单位：亿元人民币）` : '';
+
+      bbwRenderLegend();
+      bbwDrawChart();
+    })
+    .catch(e => {
+      if (loading) { loading.textContent = '图表加载失败：' + e.message; loading.style.color = '#c00'; }
+    });
+
+  window.addEventListener('resize', () => { if (bbwData) bbwDrawChart(); });
+}
+
+// 图例（可点击切换显示/隐藏某公司）
+function bbwRenderLegend() {
+  const box = document.getElementById('bbw-legend');
+  box.innerHTML = '';
+  (bbwData.companies || []).forEach(c => {
+    const on = bbwSelected.has(c.code);
+    const chip = document.createElement('span');
+    chip.className = 'bbw-chip' + (on ? '' : ' off');
+    chip.innerHTML = `<i class="bbw-sw" style="background:${on ? bbwColor[c.code] : '#ccc'}"></i>` +
+                     `${c.code} ${hkEsc(c.cn)}`;
+    chip.title = `累计回购 ${c.totalYi} 亿元（点击切换显示）`;
+    chip.addEventListener('click', () => {
+      if (bbwSelected.has(c.code)) bbwSelected.delete(c.code);
+      else bbwSelected.add(c.code);
+      bbwRenderLegend(); bbwDrawChart();
+    });
+    box.appendChild(chip);
+  });
+}
+
+// 按当前区间筛选周
+function bbwVisibleWeeks() {
+  const weeks = bbwData.weeks || [];
+  if (!bbwDays) return weeks;
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - bbwDays);
+  const cutStr = cutoff.toISOString().slice(0, 10);
+  return weeks.filter(w => w.weekStart >= cutStr);
+}
+
+function bbwDrawChart() {
+  const el = document.getElementById('bbw-chart');
+  el.innerHTML = '';
+  const weeks = bbwVisibleWeeks();
+  const keys  = (bbwData.companies || []).map(c => c.code).filter(code => bbwSelected.has(code));
+
+  if (!weeks.length || !keys.length) {
+    el.innerHTML = `<div class="chart-hint">${!keys.length ? '请在上方图例选择至少一家公司' : '所选区间暂无数据'}</div>`;
+    return;
+  }
+
+  const W = el.clientWidth || 900, H = 300;
+  const M = { top: 16, right: 20, bottom: 64, left: 56 };
+  const iW = W - M.left - M.right, iH = H - M.top - M.bottom;
+
+  const svg = d3.select(el).append('svg').attr('width', W).attr('height', H);
+  const g = svg.append('g').attr('transform', `translate(${M.left},${M.top})`);
+
+  const x = d3.scaleBand().domain(weeks.map(w => w.weekStart)).range([0, iW]).padding(0.15);
+  const stacked = d3.stack().keys(keys).value((w, key) => (w.byCompany && w.byCompany[key]) || 0)(weeks);
+  const yMax = d3.max(weeks, w => keys.reduce((s, k) => s + ((w.byCompany && w.byCompany[k]) || 0), 0)) || 1;
+  const y = d3.scaleLinear().domain([0, yMax * 1.08]).nice().range([iH, 0]);
+
+  const tip = d3.select(el).append('div').attr('class', 'd3-tip');
+
+  g.append('g').selectAll('g').data(stacked).join('g')
+    .attr('fill', layer => bbwColor[layer.key])
+    .selectAll('rect').data(layer => layer.map(seg => ({ seg, key: layer.key }))).join('rect')
+      .attr('x', d => x(d.seg.data.weekStart))
+      .attr('y', d => y(d.seg[1]))
+      .attr('height', d => Math.max(0, y(d.seg[0]) - y(d.seg[1])))
+      .attr('width', x.bandwidth())
+      .on('mousemove', (event, d) => {
+        const cn = (bbwData.companies.find(c => c.code === d.key) || {}).cn || d.key;
+        const val = (d.seg.data.byCompany[d.key] || 0);
+        const total = keys.reduce((s, k) => s + ((d.seg.data.byCompany[k]) || 0), 0);
+        tip.style('display', 'block')
+           .style('left', (event.offsetX + 14) + 'px')
+           .style('top', (event.offsetY - 20) + 'px')
+           .html(`<b>${d.seg.data.weekStart} ~ ${d.seg.data.weekEnd}</b><br/>` +
+                 `${d.key} ${hkEsc(cn)}：<b style="color:${bbwColor[d.key]}">${val.toFixed(3)}</b> 亿<br/>` +
+                 `所选合计：<b>${total.toFixed(3)}</b> 亿`);
+      })
+      .on('mouseleave', () => tip.style('display', 'none'));
+
+  const every = Math.max(1, Math.floor(weeks.length / 14));
+  g.append('g').attr('transform', `translate(0,${iH})`)
+    .call(d3.axisBottom(x).tickValues(weeks.filter((_, i) => i % every === 0).map(w => w.weekStart))
+      .tickFormat(s => s.slice(5)).tickSize(3))
+    .selectAll('text').attr('transform', 'rotate(-32)').attr('text-anchor', 'end')
+    .attr('dx', '-0.5em').attr('dy', '0.15em').style('font-size', '11px');
+  g.append('g').call(d3.axisLeft(y).ticks(6).tickFormat(d => d + '亿'));
 }
 
 // ════════════════════════════════════════════════════════════════════════════

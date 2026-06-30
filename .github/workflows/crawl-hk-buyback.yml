@@ -44,11 +44,14 @@ jobs:
           DATE_FROM: ${{ github.event.inputs.date_from }}
           DATE_TO:   ${{ github.event.inputs.date_to }}
 
+      - name: 构建每周回购汇总（折合人民币）
+        run: node build-buyback-weekly.js
+
       - name: 提交并推送更新数据
         run: |
           git config user.name  "HK Buyback Bot"
           git config user.email "bot@github-actions.com"
-          git add data/hk-buybacks.json
+          git add data/hk-buybacks.json data/hk-buyback-weekly.json
           git diff --staged --quiet && echo "数据无更新，跳过提交" || (
             git commit -m "HK buyback update: $(date +%Y-%m-%d)"
             git push
